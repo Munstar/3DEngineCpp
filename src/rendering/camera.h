@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 Benny Bobaganoosh
+ * Copyright (C) 2017 Xin Song
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +40,9 @@ public:
 	//will transform the point into it's location on the screen, where -1 represents the bottom/left
 	//of the screen, and 1 represents the top/right of the screen.
 	Matrix4f GetViewProjection()           const;
+	Matrix4f GetView()					   const;
+	Matrix4f GetProjection()			   const;
+	Matrix4f GetCameraRotation()    	   const;
 	
 	inline void SetProjection(const Matrix4f& projection) { m_projection = projection; }
 	inline void SetTransform(Transform* transform)        { m_transform = transform; }

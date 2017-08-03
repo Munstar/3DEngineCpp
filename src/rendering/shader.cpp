@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 Benny Bobaganoosh
+ * Copyright (C) 2017 Xin Song
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -217,12 +218,22 @@ void Shader::UpdateUniforms(const Transform& transform, const Material& material
 			material.GetTexture(uniformName).Bind(samplerSlot);
 			SetUniformi(uniformName, samplerSlot);
 		}
+		else if(uniformType == "samplerCube")
+		{
+			int samplerSlot = renderingEngine.GetSamplerSlot(uniformName);
+			material.GetTexture(uniformName).Bind(samplerSlot);
+			SetUniformi(uniformName, samplerSlot);
+		}
 		else if(uniformName.substr(0, 2) == "T_")
 		{
 			if(uniformName == "T_MVP")
 				SetUniformMatrix4f(uniformName, projectedMatrix);
 			else if(uniformName == "T_model")
 				SetUniformMatrix4f(uniformName, worldMatrix);
+			else if(uniformName == "T_projection")
+				SetUniformMatrix4f(uniformName, camera.GetProjection());
+			else if(uniformName == "T_cameraRot")
+				SetUniformMatrix4f(uniformName, camera.GetCameraRotation());
 			else
 				throw "Invalid Transform Uniform: " + uniformName;
 		}

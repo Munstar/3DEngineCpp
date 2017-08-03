@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 Benny Bobaganoosh
+ * Copyright (C) 2017 Xin Song
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +32,26 @@ Matrix4f Camera::GetViewProjection() const
 	cameraTranslation.InitTranslation(GetTransform().GetTransformedPos() * -1);
 	
 	return m_projection * cameraRotation * cameraTranslation;
+}
+
+Matrix4f Camera::GetView() const
+{
+	Matrix4f cameraRotation = GetTransform().GetTransformedRot().Conjugate().ToRotationMatrix();
+	Matrix4f cameraTranslation;
+	cameraTranslation.InitTranslation(GetTransform().GetTransformedPos() * -1);
+
+	return cameraRotation * cameraTranslation;
+}
+
+Matrix4f Camera::GetProjection() const
+{
+	return m_projection;
+}
+
+Matrix4f Camera::GetCameraRotation() const
+{
+	Matrix4f cameraRotation = GetTransform().GetTransformedRot().Conjugate().ToRotationMatrix();
+	return cameraRotation;
 }
 
 void CameraComponent::AddToEngine(CoreEngine* engine) const

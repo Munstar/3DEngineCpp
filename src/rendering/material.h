@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 Benny Bobaganoosh
+ * Copyright (C) 2017 Xin Song
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +39,8 @@ public:
 	Material(const std::string& materialName, const Texture& diffuse, float specularIntensity, float specularPower,
 		const Texture& normalMap = Texture("default_normal.jpg"),
 		const Texture& dispMap = Texture("default_disp.png"), float dispMapScale = 0.0f, float dispMapOffset = 0.0f);
+
+	Material(const std::string& materialName, const Texture& cubemap);
 		
 	inline void SetVector3f(const std::string& name, const Vector3f& value) { m_materialData->SetVector3f(name, value); }
 	inline void SetFloat(const std::string& name, float value)              { m_materialData->SetFloat(name, value); }

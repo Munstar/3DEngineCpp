@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 Benny Bobaganoosh
+ * Copyright (C) 2017 Xin Song
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,9 +38,9 @@ private:
 
 void TestGame::Init(const Window& window)
 {
-	Material bricks("bricks", Texture("bricks.jpg"), 0.0f, 0, 
+	Material bricks("bricks", Texture("bricks.jpg"), 0.0f, 0,
 			Texture("bricks_normal.jpg"), Texture("bricks_disp.png"), 0.03f, -0.5f);
-	Material bricks2("bricks2", Texture("bricks2.jpg"), 0.0f, 0, 
+	Material bricks2("bricks2", Texture("bricks2.jpg"), 0.0f, 0,
 			Texture("bricks2_normal.png"), Texture("bricks2_disp.jpg"), 0.04f, -1.0f);
 
 	IndexedModel square;
@@ -115,15 +116,20 @@ void TestGame::Init(const Window& window)
 
 	AddToScene((new Entity())
 				->AddComponent(new CameraComponent(Matrix4f().InitPerspective(
-							ToRadians(70.0f), window.GetAspect(), 0.1f, 1000.0f)))
+							ToRadians(45.0f), window.GetAspect(), 0.1f, 1000.0f)))
 				->AddComponent(new FreeLook(window.GetCenter()))
 				->AddComponent(new FreeMove(10.0f)));
 
 	static const int CUBE_SIZE = 3;
 
 	AddToScene((new Entity())
-		->AddComponent(new PointLight(Vector3f(1,1,1), 
+		->AddComponent(new PointLight(Vector3f(1,1,1),
 				(CUBE_SIZE * CUBE_SIZE) * 2, Attenuation(0,0,1))));
+
+	AddToScene((new Entity(Vector3f(0,12,0)))
+		->AddComponent(new PointLight(Vector3f(1,1,1),
+				(CUBE_SIZE * CUBE_SIZE) * 2, Attenuation(0,0,0.5))));
+
 
 	for(int i = -CUBE_SIZE; i <= CUBE_SIZE; i++)
 	{
@@ -138,16 +144,16 @@ void TestGame::Init(const Window& window)
 					if(i == 0 || j == 0 || k == 0)
 					{
 						AddToScene((new Entity(Vector3f(i * 2, j * 2, k * 2)))
-							->AddComponent(new MeshRenderer(Mesh("sphere.obj"), 
+							->AddComponent(new MeshRenderer(Mesh("sphere.obj"),
 									Material("bricks"))));
 					}
 					else
 					{
 						AddToScene((new Entity(Vector3f(i * 2, j * 2, k * 2)))
-							->AddComponent(new MeshRenderer(Mesh("cube.obj"), 
+							->AddComponent(new MeshRenderer(Mesh("cube.obj"),
 									Material("bricks2"))));
 					}
-			
+
 				}
 			}
 		}

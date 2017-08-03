@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 Benny Bobaganoosh
+ * Copyright (C) 2017 Xin Song
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +25,7 @@
 #include <iostream>
 #include <cassert>
 #include <cstring>
+#include <vector>
 
 std::map<std::string, TextureData*> Texture::s_resourceMap;
 
@@ -61,18 +63,36 @@ void TextureData::InitTextures(unsigned char** data, GLfloat* filters, GLenum* i
 	for(int i = 0; i < m_numTextures; i++)
 	{
 		glBindTexture(m_textureTarget, m_textureID[i]);
-			
+
 		glTexParameterf(m_textureTarget, GL_TEXTURE_MIN_FILTER, filters[i]);
 		glTexParameterf(m_textureTarget, GL_TEXTURE_MAG_FILTER, filters[i]);
-		
+
 		if(clamp)
 		{
 			glTexParameterf(m_textureTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameterf(m_textureTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+			if(m_textureTarget == GL_TEXTURE_CUBE_MAP)
+			{
+				glTexParameterf(m_textureTarget, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+			}
 		}
-		
-		glTexImage2D(m_textureTarget, 0, internalFormat[i], m_width, m_height, 0, format[i], GL_UNSIGNED_BYTE, data[i]);
-		
+
+		if(m_textureTarget == GL_TEXTURE_2D)
+		{
+			glTexImage2D(m_textureTarget, 0, internalFormat[i], m_width, m_height, 0, format[i], GL_UNSIGNED_BYTE,
+						 data[i]);
+		}
+
+		if(m_textureTarget == GL_TEXTURE_CUBE_MAP)
+		{
+			for(int j = 0; j < 6; j++)
+			{
+				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, 0, internalFormat[i], m_width, m_height, 0, format[i], GL_UNSIGNED_BYTE,
+							 data[j]);
+			}
+		}
+
 		if(filters[i] == GL_NEAREST_MIPMAP_NEAREST ||
 			filters[i] == GL_NEAREST_MIPMAP_LINEAR ||
 			filters[i] == GL_LINEAR_MIPMAP_NEAREST ||
@@ -176,17 +196,52 @@ Texture::Texture(const std::string& fileName, GLenum textureTarget, GLfloat filt
 	}
 	else
 	{
-		int x, y, bytesPerPixel;
-		unsigned char* data = stbi_load(("./res/textures/" + fileName).c_str(), &x, &y, &bytesPerPixel, 4);
-
-		if(data == NULL)
+		// load texture form file
+		if(textureTarget == GL_TEXTURE_2D)
 		{
-			std::cerr << "Unable to load texture: " << fileName << std::endl;
+			int x, y, bytesPerPixel;
+			unsigned char *data = stbi_load(("./res/textures/" + fileName).c_str(), &x, &y, &bytesPerPixel, 4);
+
+			if (data == NULL)
+			{
+				std::cerr << "Unable to load texture: " << fileName << std::endl;
+			}
+
+			m_textureData = new TextureData(textureTarget, x, y, 1, &data, &filter, &internalFormat, &format, clamp,
+											&attachment);
+			stbi_image_free(data);
 		}
 
-		m_textureData = new TextureData(textureTarget, x, y, 1, &data, &filter, &internalFormat, &format, clamp, &attachment);
-		stbi_image_free(data);
-		
+		if(textureTarget == GL_TEXTURE_CUBE_MAP)
+		{
+            std::vector<std::string> faces;
+            faces.push_back("./res/textures/" + fileName + "/right.jpg");
+            faces.push_back("./res/textures/" + fileName + "/left.jpg");
+            faces.push_back("./res/textures/" + fileName + "/top.jpg");
+            faces.push_back("./res/textures/" + fileName + "/bottom.jpg");
+            faces.push_back("./res/textures/" + fileName + "/back.jpg");
+            faces.push_back("./res/textures/" + fileName + "/front.jpg");
+
+            int x, y, bytesPerPixel;
+            unsigned char* datas[6] = {NULL};
+            for(int i = 0; i < faces.size(); i++)
+            {
+                datas[i] = stbi_load(faces[i].c_str(), &x, &y, &bytesPerPixel, 4);
+
+                if(datas[i] == NULL)
+                {
+                    std::cerr << "Unable to load texture: " << faces[i] << std::endl;
+                }
+            }
+            m_textureData = new TextureData(textureTarget, x, y, 1, datas, &filter, &internalFormat, &format, true,
+                                            &attachment);
+
+            for(int i = 0; i < faces.size(); i++)
+            {
+                stbi_image_free(datas[i]);
+            }
+		}
+
 		s_resourceMap.insert(std::pair<std::string, TextureData*>(fileName, m_textureData));
 	}
 }

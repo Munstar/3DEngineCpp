@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 Benny Bobaganoosh
+ * Copyright (C) 2017 Xin Song
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,11 +40,13 @@ const Matrix4f RenderingEngine::BIAS_MATRIX = Matrix4f().InitScale(Vector3f(0.5,
 
 RenderingEngine::RenderingEngine(const Window& window) :
 	m_plane(Mesh("plane.obj")),
+    m_skybox("skyboxCubeMap"),
 	m_window(&window),
 	m_tempTarget(window.GetWidth(), window.GetHeight(), 0, GL_TEXTURE_2D, GL_NEAREST, GL_RGBA, GL_RGBA, false, GL_COLOR_ATTACHMENT0),
 	m_planeMaterial("renderingEngine_filterPlane", m_tempTarget, 1, 8),
 	m_defaultShader("forward-ambient"),
 	m_shadowMapShader("shadowMapGenerator"),
+	m_skyboxShader("skybox"),
 	m_nullFilter("filter-null"),
 	m_gausBlurFilter("filter-gausBlur7x1"),
 	m_fxaaFilter("filter-fxaa"),
@@ -54,6 +57,8 @@ RenderingEngine::RenderingEngine(const Window& window) :
 	SetSamplerSlot("normalMap", 1);
 	SetSamplerSlot("dispMap",   2);
 	SetSamplerSlot("shadowMap", 3);
+
+    SetSamplerSlot("skyboxCubeMap", 0);
 	
 	SetSamplerSlot("filterTexture", 0);
 	
@@ -228,6 +233,9 @@ void RenderingEngine::Render(const Entity& object)
 		
 //		glDisable(GL_SCISSOR_TEST);
 	}
+
+    // render skyboxCubeMap
+    m_skybox.Render(m_skyboxShader, *this, *m_mainCamera);
 	
 	float displayTextureAspect = (float)GetTexture("displayTexture").GetWidth()/(float)GetTexture("displayTexture").GetHeight();
 	float displayTextureHeightAdditive = displayTextureAspect * GetFloat("fxaaAspectDistortion");

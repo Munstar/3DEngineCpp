@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 Benny Bobaganoosh
+ * Copyright (C) 2017 Xin Song
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,4 +75,13 @@ Material::Material(const std::string& materialName, const Texture& diffuse, floa
 	float baseBias = dispMapScale/2.0f;
 	m_materialData->SetFloat("dispMapScale", dispMapScale);
 	m_materialData->SetFloat("dispMapBias", -baseBias + baseBias * dispMapOffset);
+}
+
+Material::Material(const std::string &materialName, const Texture &skyboxCubeMap) :
+		m_materialName(materialName)
+{
+	m_materialData = new MaterialData();
+	s_resourceMap[m_materialName] = m_materialData;
+
+	m_materialData->SetTexture("skyboxCubeMap", skyboxCubeMap);
 }

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 Benny Bobaganoosh
+ * Copyright (C) 2017 Xin Song
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +23,7 @@
 #include "material.h"
 #include "mesh.h"
 #include "window.h"
+#include "skybox.h"
 
 #include "../core/mappedValues.h"
 #include "../core/profiling.h"
@@ -63,6 +65,7 @@ private:
 	ProfileTimer                        m_windowSyncProfileTimer;
 	Transform                           m_planeTransform;
 	Mesh                                m_plane;
+    Skybox                              m_skybox;
 	
 	const Window*                       m_window;
 	Texture                             m_tempTarget;
@@ -72,6 +75,7 @@ private:
 	
 	Shader                              m_defaultShader;
 	Shader                              m_shadowMapShader;
+	Shader								m_skyboxShader;
 	Shader                              m_nullFilter;
 	Shader                              m_gausBlurFilter;
 	Shader                              m_fxaaFilter;
@@ -87,8 +91,8 @@ private:
 	void BlurShadowMap(int shadowMapIndex, float blurAmount);
 	void ApplyFilter(const Shader& filter, const Texture& source, const Texture* dest);
 	
-	RenderingEngine(const RenderingEngine& other) :
-		m_altCamera(Matrix4f(),0){}
+//	RenderingEngine(const RenderingEngine& other) :
+//		m_altCamera(Matrix4f(),0){}
 	void operator=(const RenderingEngine& other) {}
 };
 
