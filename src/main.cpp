@@ -120,44 +120,52 @@ void TestGame::Init(const Window& window)
 				->AddComponent(new FreeLook(window.GetCenter()))
 				->AddComponent(new FreeMove(10.0f)));
 
+//    Material gun("gun");
+//    gun.SetTexture("diffuse", Texture("Cerberus_A.tga"));
+//    gun.SetTexture("normalMap", Texture("Cerberus_N"));
+//
+//	AddToScene((new Entity(Vector3f(0, 0, 0)))
+//							->AddComponent(new MeshRenderer(Mesh("gun.obj"),
+//									Material("gun"))));
+
 	static const int CUBE_SIZE = 3;
 
-	AddToScene((new Entity())
-		->AddComponent(new PointLight(Vector3f(1,1,1),
-				(CUBE_SIZE * CUBE_SIZE) * 2, Attenuation(0,0,1))));
+//	AddToScene((new Entity())
+//		->AddComponent(new PointLight(Vector3f(1,1,1),
+//				(CUBE_SIZE * CUBE_SIZE) * 2, Attenuation(0,0,1))));
 
-	AddToScene((new Entity(Vector3f(0,12,0)))
-		->AddComponent(new PointLight(Vector3f(1,1,1),
-				(CUBE_SIZE * CUBE_SIZE) * 2, Attenuation(0,0,0.5))));
+//	AddToScene((new Entity(Vector3f(0,12,0)))
+//		->AddComponent(new PointLight(Vector3f(1,1,1),
+//				(CUBE_SIZE * CUBE_SIZE) * 2, Attenuation(0,0,0.5))));
 
 
-	for(int i = -CUBE_SIZE; i <= CUBE_SIZE; i++)
-	{
-		for(int j = -CUBE_SIZE; j <= CUBE_SIZE; j++)
-		{
-			for(int k = -CUBE_SIZE; k <= CUBE_SIZE; k++)
-			{
-				if(i == -CUBE_SIZE || i == CUBE_SIZE ||
-				   j == -CUBE_SIZE || j == CUBE_SIZE ||
-				   k == -CUBE_SIZE || k == CUBE_SIZE)
-				{
-					if(i == 0 || j == 0 || k == 0)
-					{
-						AddToScene((new Entity(Vector3f(i * 2, j * 2, k * 2)))
-							->AddComponent(new MeshRenderer(Mesh("sphere.obj"),
-									Material("bricks"))));
-					}
-					else
-					{
-						AddToScene((new Entity(Vector3f(i * 2, j * 2, k * 2)))
-							->AddComponent(new MeshRenderer(Mesh("cube.obj"),
-									Material("bricks2"))));
-					}
-
-				}
-			}
-		}
-	}
+//	for(int i = -CUBE_SIZE; i <= CUBE_SIZE; i++)
+//	{
+//		for(int j = -CUBE_SIZE; j <= CUBE_SIZE; j++)
+//		{
+//			for(int k = -CUBE_SIZE; k <= CUBE_SIZE; k++)
+//			{
+//				if(i == -CUBE_SIZE || i == CUBE_SIZE ||
+//				   j == -CUBE_SIZE || j == CUBE_SIZE ||
+//				   k == -CUBE_SIZE || k == CUBE_SIZE)
+//				{
+//					if(i == 0 || j == 0 || k == 0)
+//					{
+//						AddToScene((new Entity(Vector3f(i * 2, j * 2, k * 2)))
+//							->AddComponent(new MeshRenderer(Mesh("sphere.obj"),
+//									Material("bricks"))));
+//					}
+//					else
+//					{
+//						AddToScene((new Entity(Vector3f(i * 2, j * 2, k * 2)))
+//							->AddComponent(new MeshRenderer(Mesh("cube.obj"),
+//									Material("bricks2"))));
+//					}
+//
+//				}
+//			}
+//		}
+//	}
 
 
 }
@@ -169,7 +177,7 @@ int main()
 	Testing::RunAllTests();
 
 	TestGame game;
-	Window window(800, 600, "3D Game Engine");
+	Window window(1280, 720, "3D Game Engine");
 	RenderingEngine renderer(window);
 	
 	//window.SetFullScreen(true);

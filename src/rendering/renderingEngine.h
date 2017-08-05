@@ -27,6 +27,7 @@
 
 #include "../core/mappedValues.h"
 #include "../core/profiling.h"
+#include "../3DEngine.h"
 
 #include <vector>
 #include <map>
@@ -39,6 +40,12 @@ public:
 	virtual ~RenderingEngine() {}
 	
 	void Render(const Entity& object);
+
+    void PrepareIrradianceMap();
+
+    void PreparePrefilterMap();
+
+    void PrepareBrdfLUT();
 	
 	inline void AddLight(const BaseLight& light) { m_lights.push_back(&light); }
 	inline void SetMainCamera(const Camera& camera) { m_mainCamera = &camera; }
@@ -65,22 +72,35 @@ private:
 	ProfileTimer                        m_windowSyncProfileTimer;
 	Transform                           m_planeTransform;
 	Mesh                                m_plane;
+    Mesh                                m_gun;
     Skybox                              m_skybox;
 	
 	const Window*                       m_window;
 	Texture                             m_tempTarget;
 	Material                            m_planeMaterial;
+    Material                            m_pbrMaterial;
 	Texture                             m_shadowMaps[NUM_SHADOW_MAPS];
 	Texture                             m_shadowMapTempTargets[NUM_SHADOW_MAPS];
+    Texture                             m_irradianceMap;
+    Texture                             m_prefilterMap;
+    Texture                             m_brdfLUT;
 	
 	Shader                              m_defaultShader;
 	Shader                              m_shadowMapShader;
 	Shader								m_skyboxShader;
+    Shader                              m_irradianceShader;
+	Shader								m_cubeboxTestShader;
+	Shader								m_texTestShader;
+    Shader                              m_prefilterShader;
+    Shader                              m_brdfShader;
+    Shader                              m_pbrShader;
 	Shader                              m_nullFilter;
 	Shader                              m_gausBlurFilter;
 	Shader                              m_fxaaFilter;
 	Matrix4f                            m_lightMatrix;
-	
+
+	Mesh								m_testMesh;
+
 	Transform                           m_altCameraTransform;
 	Camera                              m_altCamera;
 	const Camera*                       m_mainCamera;
@@ -91,8 +111,9 @@ private:
 	void BlurShadowMap(int shadowMapIndex, float blurAmount);
 	void ApplyFilter(const Shader& filter, const Texture& source, const Texture* dest);
 	
-//	RenderingEngine(const RenderingEngine& other) :
-//		m_altCamera(Matrix4f(),0){}
+	RenderingEngine(const RenderingEngine& other) :
+            m_skybox("skyboxCubeMap"),
+		    m_altCamera(Matrix4f(),0) {}
 	void operator=(const RenderingEngine& other) {}
 };
 

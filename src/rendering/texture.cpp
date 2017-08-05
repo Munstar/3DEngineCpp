@@ -29,7 +29,7 @@
 
 std::map<std::string, TextureData*> Texture::s_resourceMap;
 
-TextureData::TextureData(GLenum textureTarget, int width, int height, int numTextures, unsigned char** data, GLfloat* filters, GLenum* internalFormat, GLenum* format, bool clamp, GLenum* attachments)
+TextureData::TextureData(GLenum textureTarget, int width, int height, int numTextures, unsigned char** data, GLfloat* filters, GLenum* internalFormat, GLenum* format, GLenum* type, bool clamp, GLenum* attachments)
 {
 	m_textureID = new GLuint[numTextures];
 	m_textureTarget = textureTarget;
@@ -45,7 +45,7 @@ TextureData::TextureData(GLenum textureTarget, int width, int height, int numTex
 	m_frameBuffer = 0;
 	m_renderBuffer = 0;
 	
-	InitTextures(data, filters, internalFormat, format, clamp);
+	InitTextures(data, filters, internalFormat, format, type, clamp);
 	InitRenderTargets(attachments);
 }
 
@@ -57,7 +57,7 @@ TextureData::~TextureData()
 	if(m_textureID) delete[] m_textureID;
 }
 
-void TextureData::InitTextures(unsigned char** data, GLfloat* filters, GLenum* internalFormat, GLenum* format, bool clamp)
+void TextureData::InitTextures(unsigned char** data, GLfloat* filters, GLenum* internalFormat, GLenum* format, GLenum* type, bool clamp)
 {
 	glGenTextures(m_numTextures, m_textureID);
 	for(int i = 0; i < m_numTextures; i++)
@@ -80,7 +80,7 @@ void TextureData::InitTextures(unsigned char** data, GLfloat* filters, GLenum* i
 
 		if(m_textureTarget == GL_TEXTURE_2D)
 		{
-			glTexImage2D(m_textureTarget, 0, internalFormat[i], m_width, m_height, 0, format[i], GL_UNSIGNED_BYTE,
+			glTexImage2D(m_textureTarget, 0, internalFormat[i], m_width, m_height, 0, format[i], type[i],
 						 data[i]);
 		}
 
@@ -88,8 +88,15 @@ void TextureData::InitTextures(unsigned char** data, GLfloat* filters, GLenum* i
 		{
 			for(int j = 0; j < 6; j++)
 			{
-				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, 0, internalFormat[i], m_width, m_height, 0, format[i], GL_UNSIGNED_BYTE,
-							 data[j]);
+				if(data[0] == NULL)
+				{
+					glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, 0, internalFormat[i], m_width, m_height, 0, format[i], type[i], NULL);
+				}
+				else
+				{
+					glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, 0, internalFormat[i], m_width, m_height, 0, format[i], type[i], data[j]);
+				}
+
 			}
 		}
 
@@ -138,8 +145,11 @@ void TextureData::InitRenderTargets(GLenum* attachments)
 			glGenFramebuffers(1, &m_frameBuffer);
 			glBindFramebuffer(GL_FRAMEBUFFER, m_frameBuffer);
 		}
-		
-		glFramebufferTexture2D(GL_FRAMEBUFFER, attachments[i], m_textureTarget, m_textureID[i], 0);
+
+        if(m_textureTarget == GL_TEXTURE_2D)
+        {
+            glFramebufferTexture2D(GL_FRAMEBUFFER, attachments[i], m_textureTarget, m_textureID[i], 0);
+        }
 	}
 	
 	if(m_frameBuffer == 0)
@@ -149,7 +159,7 @@ void TextureData::InitRenderTargets(GLenum* attachments)
 	{
 		glGenRenderbuffers(1, &m_renderBuffer);
 		glBindRenderbuffer(GL_RENDERBUFFER, m_renderBuffer);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, m_width, m_height);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, m_width, m_height);
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_renderBuffer);
 	}
 	
@@ -174,7 +184,7 @@ void TextureData::Bind(int textureNum) const
 
 void TextureData::BindAsRenderTarget() const
 {
-	glBindTexture(GL_TEXTURE_2D,0);
+	glBindTexture(m_textureTarget, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_frameBuffer);
 	
 	#if PROFILING_SET_1x1_VIEWPORT == 0
@@ -184,7 +194,12 @@ void TextureData::BindAsRenderTarget() const
 	#endif
 }
 
-Texture::Texture(const std::string& fileName, GLenum textureTarget, GLfloat filter, GLenum internalFormat, GLenum format, bool clamp, GLenum attachment)
+void TextureData::BindCubeMapUnit(unsigned int unit, unsigned int mip_level) const
+{
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + unit, m_textureID[0], mip_level);
+}
+
+Texture::Texture(const std::string& fileName, GLenum textureTarget, GLfloat filter, GLenum internalFormat, GLenum format, GLenum type, bool clamp, GLenum attachment)
 {
  	m_fileName = fileName;
 
@@ -207,7 +222,7 @@ Texture::Texture(const std::string& fileName, GLenum textureTarget, GLfloat filt
 				std::cerr << "Unable to load texture: " << fileName << std::endl;
 			}
 
-			m_textureData = new TextureData(textureTarget, x, y, 1, &data, &filter, &internalFormat, &format, clamp,
+			m_textureData = new TextureData(textureTarget, x, y, 1, &data, &filter, &internalFormat, &format, &type, clamp,
 											&attachment);
 			stbi_image_free(data);
 		}
@@ -224,7 +239,7 @@ Texture::Texture(const std::string& fileName, GLenum textureTarget, GLfloat filt
 
             int x, y, bytesPerPixel;
             unsigned char* datas[6] = {NULL};
-            for(int i = 0; i < faces.size(); i++)
+            for(unsigned int i = 0; i < faces.size(); i++)
             {
                 datas[i] = stbi_load(faces[i].c_str(), &x, &y, &bytesPerPixel, 4);
 
@@ -233,10 +248,10 @@ Texture::Texture(const std::string& fileName, GLenum textureTarget, GLfloat filt
                     std::cerr << "Unable to load texture: " << faces[i] << std::endl;
                 }
             }
-            m_textureData = new TextureData(textureTarget, x, y, 1, datas, &filter, &internalFormat, &format, true,
+            m_textureData = new TextureData(textureTarget, x, y, 1, datas, &filter, &internalFormat, &format, &type, true,
                                             &attachment);
 
-            for(int i = 0; i < faces.size(); i++)
+            for(unsigned int i = 0; i < faces.size(); i++)
             {
                 stbi_image_free(datas[i]);
             }
@@ -246,10 +261,10 @@ Texture::Texture(const std::string& fileName, GLenum textureTarget, GLfloat filt
 	}
 }
 
-Texture::Texture(int width, int height, unsigned char* data, GLenum textureTarget, GLfloat filter, GLenum internalFormat, GLenum format, bool clamp, GLenum attachment)
+Texture::Texture(int width, int height, unsigned char* data, GLenum textureTarget, GLfloat filter, GLenum internalFormat, GLenum format, GLenum type, bool clamp, GLenum attachment)
 {
 	m_fileName = "";
-	m_textureData = new TextureData(textureTarget, width, height, 1, &data, &filter, &internalFormat, &format, clamp, &attachment);
+	m_textureData = new TextureData(textureTarget, width, height, 1, &data, &filter, &internalFormat, &format, &type, clamp, &attachment);
 }
 
 Texture::Texture(const Texture& texture) :
@@ -288,4 +303,9 @@ void Texture::Bind(unsigned int unit) const
 void Texture::BindAsRenderTarget() const
 {
 	m_textureData->BindAsRenderTarget();
+}
+
+void Texture::BindCubeMapUnit(unsigned int unit, unsigned int mip_level) const
+{
+    m_textureData->BindCubeMapUnit(unit, mip_level);
 }

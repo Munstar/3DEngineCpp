@@ -49,3 +49,5 @@
 
 #define lerp(a, b, t) mix(a, b, t)
 #define saturate(a) clamp(a, 0.0, 1.0)
+
+#define PI 3.14159265359

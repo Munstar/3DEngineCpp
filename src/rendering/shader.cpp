@@ -234,6 +234,8 @@ void Shader::UpdateUniforms(const Transform& transform, const Material& material
 				SetUniformMatrix4f(uniformName, camera.GetProjection());
 			else if(uniformName == "T_cameraRot")
 				SetUniformMatrix4f(uniformName, camera.GetCameraRotation());
+			else if(uniformName == "T_view")
+				SetUniformMatrix4f(uniformName, camera.GetView());
 			else
 				throw "Invalid Transform Uniform: " + uniformName;
 		}

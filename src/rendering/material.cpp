@@ -29,12 +29,17 @@ Material::Material(const std::string& materialName) :
 		std::map<std::string, MaterialData*>::const_iterator it = s_resourceMap.find(materialName);
 		if(it == s_resourceMap.end())
 		{
-			std::cerr << "Error: Material " << materialName << " has not been initialized!" << std::endl;
-			assert(0 != 0);
+            m_materialData = new MaterialData();
+            s_resourceMap[m_materialName] = m_materialData;
+//			std::cerr << "Error: Material " << materialName << " has not been initialized!" << std::endl;
+//			assert(0 != 0);
+
+            return;
 		}
 	
 		m_materialData = it->second;
 		m_materialData->AddReference();
+
 	}
 }
 
@@ -75,13 +80,4 @@ Material::Material(const std::string& materialName, const Texture& diffuse, floa
 	float baseBias = dispMapScale/2.0f;
 	m_materialData->SetFloat("dispMapScale", dispMapScale);
 	m_materialData->SetFloat("dispMapBias", -baseBias + baseBias * dispMapOffset);
-}
-
-Material::Material(const std::string &materialName, const Texture &skyboxCubeMap) :
-		m_materialName(materialName)
-{
-	m_materialData = new MaterialData();
-	s_resourceMap[m_materialName] = m_materialData;
-
-	m_materialData->SetTexture("skyboxCubeMap", skyboxCubeMap);
 }

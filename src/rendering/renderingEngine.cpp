@@ -21,9 +21,11 @@
 #include "shader.h"
 
 #include "../core/entity.h"
+#include "../3DEngine.h"
 
 #include <GL/glew.h>
 #include <cassert>
+#include <cmath>
 
 const Matrix4f RenderingEngine::BIAS_MATRIX = Matrix4f().InitScale(Vector3f(0.5, 0.5, 0.5)) * Matrix4f().InitTranslation(Vector3f(1.0, 1.0, 1.0));
 //Should construct a Matrix like this:
@@ -39,17 +41,29 @@ const Matrix4f RenderingEngine::BIAS_MATRIX = Matrix4f().InitScale(Vector3f(0.5,
 //This matrix will convert 3D coordinates from the range (-1, 1) to the range (0, 1).
 
 RenderingEngine::RenderingEngine(const Window& window) :
+    m_irradianceMap(32, 32, NULL, GL_TEXTURE_CUBE_MAP, GL_LINEAR, GL_RGB16F, GL_RGB, GL_FLOAT, true, GL_COLOR_ATTACHMENT0),
+    m_prefilterMap(128, 128, NULL, GL_TEXTURE_CUBE_MAP, GL_LINEAR_MIPMAP_LINEAR, GL_RGB16F, GL_RGB, GL_FLOAT, true, GL_COLOR_ATTACHMENT0),
+    m_brdfLUT(512, 512, NULL, GL_TEXTURE_2D, GL_LINEAR, GL_RGB16F, GL_RG, GL_FLOAT, true, GL_COLOR_ATTACHMENT0),
 	m_plane(Mesh("plane.obj")),
-    m_skybox("skyboxCubeMap"),
+    m_gun("gun.obj"),
+    m_skybox("skybox3"),
 	m_window(&window),
-	m_tempTarget(window.GetWidth(), window.GetHeight(), 0, GL_TEXTURE_2D, GL_NEAREST, GL_RGBA, GL_RGBA, false, GL_COLOR_ATTACHMENT0),
+	m_tempTarget(window.GetWidth(), window.GetHeight(), 0, GL_TEXTURE_2D, GL_NEAREST, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, false, GL_COLOR_ATTACHMENT0),
 	m_planeMaterial("renderingEngine_filterPlane", m_tempTarget, 1, 8),
+    m_pbrMaterial("pbrGun"),
 	m_defaultShader("forward-ambient"),
 	m_shadowMapShader("shadowMapGenerator"),
 	m_skyboxShader("skybox"),
+    m_irradianceShader("irradianceShader"),
+	m_cubeboxTestShader("cubeboxTestShader"),
+    m_texTestShader("texTestShader"),
+    m_prefilterShader("prefilterShader"),
+	m_brdfShader("brdf"),
+    m_pbrShader("pbrShader"),
 	m_nullFilter("filter-null"),
 	m_gausBlurFilter("filter-gausBlur7x1"),
 	m_fxaaFilter("filter-fxaa"),
+	m_testMesh("cube.obj"),
 	m_altCameraTransform(Vector3f(0,0,0), Quaternion(Vector3f(0,1,0),ToRadians(180.0f))),
 	m_altCamera(Matrix4f().InitIdentity(), &m_altCameraTransform)
 {
@@ -59,6 +73,16 @@ RenderingEngine::RenderingEngine(const Window& window) :
 	SetSamplerSlot("shadowMap", 3);
 
     SetSamplerSlot("skyboxCubeMap", 0);
+
+    SetSamplerSlot("albedoMap", 0);
+    SetSamplerSlot("normalMap", 1);
+    SetSamplerSlot("metallicMap", 2);
+    SetSamplerSlot("roughnessMap", 3);
+    SetSamplerSlot("aoMap", 4);
+
+    SetSamplerSlot("irradianceMap", 5);
+    SetSamplerSlot("prefilterMap", 6);
+    SetSamplerSlot("brdfLUT", 7);
 	
 	SetSamplerSlot("filterTexture", 0);
 	
@@ -69,7 +93,7 @@ RenderingEngine::RenderingEngine(const Window& window) :
 	SetFloat("fxaaReduceMul", 1.0f/8.0f);
 	SetFloat("fxaaAspectDistortion", 150.0f);
 
-	SetTexture("displayTexture", Texture(m_window->GetWidth(), m_window->GetHeight(), 0, GL_TEXTURE_2D, GL_LINEAR, GL_RGBA, GL_RGBA, true, GL_COLOR_ATTACHMENT0));
+	SetTexture("displayTexture", Texture(m_window->GetWidth(), m_window->GetHeight(), 0, GL_TEXTURE_2D, GL_LINEAR, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, true, GL_COLOR_ATTACHMENT0));
 
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
@@ -85,15 +109,28 @@ RenderingEngine::RenderingEngine(const Window& window) :
 	m_planeTransform.SetScale(1.0f);
 	m_planeTransform.Rotate(Quaternion(Vector3f(1,0,0), ToRadians(90.0f)));
 	m_planeTransform.Rotate(Quaternion(Vector3f(0,0,1), ToRadians(180.0f)));
+
+	PrepareIrradianceMap();
+    PrepareBrdfLUT();
+    PreparePrefilterMap();
+
+    m_pbrMaterial.SetTexture("albedoMap", Texture("Cerberus_A.tga"));
+    m_pbrMaterial.SetTexture("normalMap", Texture("Cerberus_N.tga"));
+    m_pbrMaterial.SetTexture("metallicMap", Texture("Cerberus_M.tga"));
+    m_pbrMaterial.SetTexture("roughnessMap", Texture("Cerberus_R.tga"));
+    m_pbrMaterial.SetTexture("aoMap", Texture("Cerberus_AO.tga"));
+    m_pbrMaterial.SetTexture("irradianceMap", m_irradianceMap);
+    m_pbrMaterial.SetTexture("prefilterMap", m_prefilterMap);
+    m_pbrMaterial.SetTexture("brdfLUT", m_brdfLUT);
 	
 	for(int i = 0; i < NUM_SHADOW_MAPS; i++)
 	{
 		int shadowMapSize = 1 << (i + 1);
-		m_shadowMaps[i] = Texture(shadowMapSize, shadowMapSize, 0, GL_TEXTURE_2D, GL_LINEAR, GL_RG32F, GL_RGBA, true, GL_COLOR_ATTACHMENT0);
-		m_shadowMapTempTargets[i] = Texture(shadowMapSize, shadowMapSize, 0, GL_TEXTURE_2D, GL_LINEAR, GL_RG32F, GL_RGBA, true, GL_COLOR_ATTACHMENT0);
+		m_shadowMaps[i] = Texture(shadowMapSize, shadowMapSize, 0, GL_TEXTURE_2D, GL_LINEAR, GL_RG32F, GL_RGBA, GL_UNSIGNED_BYTE, true, GL_COLOR_ATTACHMENT0);
+		m_shadowMapTempTargets[i] = Texture(shadowMapSize, shadowMapSize, 0, GL_TEXTURE_2D, GL_LINEAR, GL_RG32F, GL_RGBA, GL_UNSIGNED_BYTE, true, GL_COLOR_ATTACHMENT0);
 	}
 	
-	m_lightMatrix = Matrix4f().InitScale(Vector3f(0,0,0));	
+	m_lightMatrix = Matrix4f().InitScale(Vector3f(0,0,0));
 }
 
 void RenderingEngine::BlurShadowMap(int shadowMapIndex, float blurAmount)
@@ -133,7 +170,7 @@ void RenderingEngine::ApplyFilter(const Shader& filter, const Texture& source, c
 
 	glClear(GL_DEPTH_BUFFER_BIT);
 	filter.Bind();
-	filter.UpdateUniforms(m_planeTransform, m_planeMaterial, *this, m_altCamera);
+	filter.UpdateUniforms(m_planeTransform, Material("bricks"), *this, m_altCamera);
 	m_plane.Draw();
 	
 //	m_mainCamera = temp;
@@ -155,51 +192,51 @@ void RenderingEngine::Render(const Entity& object)
 	{
 		m_activeLight = m_lights[i];
 		ShadowInfo shadowInfo = m_activeLight->GetShadowInfo();
-		
+
 		int shadowMapIndex = 0;
 		if(shadowInfo.GetShadowMapSizeAsPowerOf2() != 0)
 			shadowMapIndex = shadowInfo.GetShadowMapSizeAsPowerOf2() - 1;
-		
+
 		assert(shadowMapIndex >= 0 && shadowMapIndex < NUM_SHADOW_MAPS);
-		
+
 		SetTexture("shadowMap", m_shadowMaps[shadowMapIndex]);
 		m_shadowMaps[shadowMapIndex].BindAsRenderTarget();
 		glClearColor(1.0f,1.0f,0.0f,0.0f);
 		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-		
+
 		if(shadowInfo.GetShadowMapSizeAsPowerOf2() != 0)
 		{
 			m_altCamera.SetProjection(shadowInfo.GetProjection());
-			ShadowCameraTransform shadowCameraTransform = m_activeLight->CalcShadowCameraTransform(m_mainCamera->GetTransform().GetTransformedPos(), 
+			ShadowCameraTransform shadowCameraTransform = m_activeLight->CalcShadowCameraTransform(m_mainCamera->GetTransform().GetTransformedPos(),
 				m_mainCamera->GetTransform().GetTransformedRot());
 			m_altCamera.GetTransform()->SetPos(shadowCameraTransform.GetPos());
 			m_altCamera.GetTransform()->SetRot(shadowCameraTransform.GetRot());
-			
+
 			m_lightMatrix = BIAS_MATRIX * m_altCamera.GetViewProjection();
-			
+
 			SetFloat("shadowVarianceMin", shadowInfo.GetMinVariance());
 			SetFloat("shadowLightBleedingReduction", shadowInfo.GetLightBleedReductionAmount());
 			bool flipFaces = shadowInfo.GetFlipFaces();
-			
+
 //			const Camera* temp = m_mainCamera;
 //			m_mainCamera = m_altCamera;
-			
+
 			if(flipFaces)
 			{
 				glCullFace(GL_FRONT);
 			}
-			
+
 			glEnable(GL_DEPTH_CLAMP);
 			object.RenderAll(m_shadowMapShader, *this, m_altCamera);
 			glDisable(GL_DEPTH_CLAMP);
-			
-			if(flipFaces) 
+
+			if(flipFaces)
 			{
 				glCullFace(GL_BACK);
 			}
-			
+
 //			m_mainCamera = temp;
-			
+
 			float shadowSoftness = shadowInfo.GetShadowSoftness();
 			if(shadowSoftness != 0)
 			{
@@ -212,38 +249,156 @@ void RenderingEngine::Render(const Entity& object)
 			SetFloat("shadowVarianceMin", 0.00002f);
 			SetFloat("shadowLightBleedingReduction", 0.0f);
 		}
-	
+
 		GetTexture("displayTexture").BindAsRenderTarget();
 		//m_window->BindAsRenderTarget();
-		
+
 //		glEnable(GL_SCISSOR_TEST);
 //		TODO: Make use of scissor test to limit light area
 //		glScissor(0, 0, 100, 100);
-		
+
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_ONE, GL_ONE);
 		glDepthMask(GL_FALSE);
 		glDepthFunc(GL_EQUAL);
 
 		object.RenderAll(m_activeLight->GetShader(), *this, *m_mainCamera);
-		
+
 		glDepthMask(GL_TRUE);
 		glDepthFunc(GL_LESS);
 		glDisable(GL_BLEND);
-		
+
 //		glDisable(GL_SCISSOR_TEST);
 	}
 
     // render skyboxCubeMap
     m_skybox.Render(m_skyboxShader, *this, *m_mainCamera);
+//
+	// render a cube
+//    Material test_material("test_material");
+//    test_material.SetTexture("skyboxCubeMap", m_irradianceMap);
+//    Mesh cube("cube.obj");
+//    m_cubeboxTestShader.Bind();
+//    m_cubeboxTestShader.UpdateUniforms(Transform(), test_material, *this, *m_mainCamera);
+//    m_gun.Draw();
+
+    m_pbrShader.Bind();
+    m_pbrShader.UpdateUniforms(Transform(Vector3f(0,0,0), Quaternion(0,0,0,1), 1.0f), m_pbrMaterial, *this, *m_mainCamera);
+    m_gun.Draw();
+
+
+//    Material test_material("test_material");
+//    test_material.SetTexture("diffuse", m_brdfLUT);
+//
+//    m_texTestShader.Bind();
+//    m_texTestShader.UpdateUniforms(Transform(), test_material, *this, *m_mainCamera);
+//    m_plane.Draw();
+
+
 	
 	float displayTextureAspect = (float)GetTexture("displayTexture").GetWidth()/(float)GetTexture("displayTexture").GetHeight();
 	float displayTextureHeightAdditive = displayTextureAspect * GetFloat("fxaaAspectDistortion");
-	SetVector3f("inverseFilterTextureSize", Vector3f(1.0f/(float)GetTexture("displayTexture").GetWidth(), 
+	SetVector3f("inverseFilterTextureSize", Vector3f(1.0f/(float)GetTexture("displayTexture").GetWidth(),
 	                                                 1.0f/((float)GetTexture("displayTexture").GetHeight() + displayTextureHeightAdditive), 0.0f));
 	m_renderProfileTimer.StopInvocation();
-	
+
 	m_windowSyncProfileTimer.StartInvocation();
 	ApplyFilter(m_fxaaFilter, GetTexture("displayTexture"), 0);
 	m_windowSyncProfileTimer.StopInvocation();
+}
+
+void RenderingEngine::PrepareIrradianceMap()
+{
+    Transform cubeCameraTransforms[6] = {
+            Transform(),
+            Transform(),
+            Transform(),
+            Transform(),
+            Transform(),
+            Transform()
+    };
+
+    cubeCameraTransforms[0].LookAt(Vector3f( 1.0f,  0.0f,  0.0f), Vector3f(0.0f, -1.0f,  0.0f));
+    cubeCameraTransforms[1].LookAt(Vector3f(-1.0f,  0.0f,  0.0f), Vector3f(0.0f, -1.0f,  0.0f));
+    cubeCameraTransforms[2].LookAt(Vector3f( 0.0f,  1.0f,  0.0f), Vector3f(0.0f,  0.0f,  1.0f));
+    cubeCameraTransforms[3].LookAt(Vector3f( 0.0f, -1.0f,  0.0f), Vector3f(0.0f,  0.0f, -1.0f));
+    cubeCameraTransforms[4].LookAt(Vector3f( 0.0f,  0.0f,  1.0f), Vector3f(0.0f, -1.0f,  0.0f));
+    cubeCameraTransforms[5].LookAt(Vector3f( 0.0f,  0.0f, -1.0f), Vector3f(0.0f, -1.0f,  0.0f));
+
+    Matrix4f projection = Matrix4f().InitPerspective(ToRadians(90.0), 1.0, 0.1f, 100.0f);
+    m_irradianceMap.BindAsRenderTarget();
+    for(unsigned int i = 0; i < 6; i++)
+    {
+        m_irradianceMap.BindCubeMapUnit(i);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        m_skybox.Render(m_irradianceShader, *this, Camera(projection, &cubeCameraTransforms[i]));
+    }
+    m_window->BindAsRenderTarget();
+}
+
+void RenderingEngine::PreparePrefilterMap()
+{
+    Transform cubeCameraTransforms[6] = {
+            Transform(),
+            Transform(),
+            Transform(),
+            Transform(),
+            Transform(),
+            Transform()
+    };
+
+    cubeCameraTransforms[0].LookAt(Vector3f( 1.0f,  0.0f,  0.0f), Vector3f(0.0f, -1.0f,  0.0f));
+    cubeCameraTransforms[1].LookAt(Vector3f(-1.0f,  0.0f,  0.0f), Vector3f(0.0f, -1.0f,  0.0f));
+    cubeCameraTransforms[2].LookAt(Vector3f( 0.0f,  1.0f,  0.0f), Vector3f(0.0f,  0.0f,  1.0f));
+    cubeCameraTransforms[3].LookAt(Vector3f( 0.0f, -1.0f,  0.0f), Vector3f(0.0f,  0.0f, -1.0f));
+    cubeCameraTransforms[4].LookAt(Vector3f( 0.0f,  0.0f,  1.0f), Vector3f(0.0f, -1.0f,  0.0f));
+    cubeCameraTransforms[5].LookAt(Vector3f( 0.0f,  0.0f, -1.0f), Vector3f(0.0f, -1.0f,  0.0f));
+
+    Matrix4f projection = Matrix4f().InitPerspective(ToRadians(90.0), 1.0, 0.1f, 100.0f);
+    m_prefilterMap.BindAsRenderTarget();
+
+    Mesh cube("cube.obj");
+    Material prefilter_material("prefilter");
+    prefilter_material.SetTexture("skyboxCubeMap", Texture("skyboxCubeMap", GL_TEXTURE_CUBE_MAP));
+    glCullFace(GL_FRONT);
+
+
+    unsigned int maxMipLevels = 5;
+    unsigned int mipWidth = 256;
+    unsigned int mipHeight = 256;
+    for(unsigned int mip = 0; mip < maxMipLevels; ++mip)
+    {
+        mipWidth /= 2;
+        mipHeight /= 2;
+        glRenderbufferStorage(GL_FRAMEBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
+        glViewport(0, 0, mipWidth, mipHeight);
+
+        float roughness = (float)mip / (float)(maxMipLevels - 1);
+        prefilter_material.SetFloat("roughness", roughness);
+        for(unsigned int i = 0; i < 6; i++)
+        {
+            m_prefilterMap.BindCubeMapUnit(i, mip);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            m_prefilterShader.Bind();
+            m_prefilterShader.UpdateUniforms(Transform(Vector3f(0,0,0), Quaternion(0,0,0,1), 50.0f), prefilter_material, *this, Camera(projection, &cubeCameraTransforms[i]));
+            cube.Draw();
+        }
+    }
+
+    glCullFace(GL_BACK);
+    m_window->BindAsRenderTarget();
+}
+
+void RenderingEngine::PrepareBrdfLUT()
+{
+	m_brdfLUT.BindAsRenderTarget();
+    m_altCamera.SetProjection(Matrix4f().InitIdentity());
+    m_altCamera.GetTransform()->SetPos(Vector3f(0,0,0));
+    m_altCamera.GetTransform()->SetRot(Quaternion(Vector3f(0,1,0),ToRadians(180.0f)));
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    m_brdfShader.Bind();
+    m_brdfShader.UpdateUniforms(m_planeTransform, m_planeMaterial, *this, m_altCamera);
+    m_plane.Draw();
+    m_window->BindAsRenderTarget();
 }

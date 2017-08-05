@@ -25,8 +25,11 @@ class Skybox {
 public:
     Skybox(const std::string& skyboxName, float scale = 50.0f) :
             m_mesh("skybox.obj"),
-            m_material("skybox", Texture("skyboxCubeMap", GL_TEXTURE_CUBE_MAP)),
-            m_transform(Transform(Vector3f(0,0,0), Quaternion(0,0,0,1), scale)) {}
+            m_material("skybox"),
+            m_transform(Transform(Vector3f(0,0,0), Quaternion(0,0,0,1), scale))
+    {
+        m_material.SetTexture("skyboxCubeMap", Texture(skyboxName, GL_TEXTURE_CUBE_MAP));
+    }
 
     void Render(const Shader& shader, const RenderingEngine& renderingEngine, const Camera& camera) const
     {
