@@ -92,7 +92,7 @@ vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness)
 }
 // ----------------------------------------------------------------------------
 
-uniform samplerCube skyboxCubeMap;
+uniform samplerCube environmentCubeMap;
 uniform float roughness;
 
 void main()
@@ -129,7 +129,9 @@ void main()
 
             float mipLevel = roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel);
 
-            prefilteredColor += textureLod(skyboxCubeMap, L, mipLevel).rgb * NdotL;
+            vec3 envColor = textureLod(environmentCubeMap, vec3(-L.x, L.y, L.z), mipLevel).rgb;
+
+            prefilteredColor += envColor * NdotL;
             totalWeight      += NdotL;
         }
     }

@@ -19,6 +19,7 @@
 varying vec2 TexCoords;
 varying vec3 WorldPos;
 varying vec3 Normal;
+//varying mat3 TBN;
 
 #if defined(VS_BUILD)
 attribute vec3 position;
@@ -86,7 +87,7 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
 
     return nom / denom;
 }
-// ----------------------------------------------------------------------------
+
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
     float r = (roughness + 1.0);
@@ -97,7 +98,7 @@ float GeometrySchlickGGX(float NdotV, float roughness)
 
     return nom / denom;
 }
-// ----------------------------------------------------------------------------
+
 float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 {
     float NdotV = max(dot(N, V), 0.0);
@@ -107,17 +108,16 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 
     return ggx1 * ggx2;
 }
-// ----------------------------------------------------------------------------
+
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
-// ----------------------------------------------------------------------------
+
 vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 {
     return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
-// ----------------------------------------------------------------------------
 
 void main()
 {
@@ -128,7 +128,7 @@ void main()
     lightPositions[2] = vec3(-10.0, -10.0, 10.0);
     lightPositions[3] = vec3(10.0, -10.0, 10.0);
 
-    vec3 albedo = pow(texture(albedoMap, TexCoords).rgb, vec3(2.8));
+    vec3 albedo = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));
     float metallic = texture(metallicMap, TexCoords).r;
     float roughness = texture(roughnessMap, TexCoords).r;
     float ao = texture(aoMap, TexCoords).r;
@@ -203,6 +203,6 @@ void main()
     // gamma correct
     color = pow(color, vec3(1.0/2.2));
 
-	SetFragOutput(0, vec4(color,1));
+	SetFragOutput(0, vec4(color, 1));
 }
 #endif

@@ -54,6 +54,39 @@ Matrix4f Camera::GetCameraRotation() const
 	return cameraRotation;
 }
 
+Camera Camera::GetCubeCamera(unsigned int index)
+{
+	index = index % 6;
+
+    static Matrix4f projection = Matrix4f().InitPerspective(ToRadians(90.0), 1.0, 0.1f, 100.0f);
+    static Transform transform = Transform();
+    switch (index)
+    {
+        case 0:
+            transform.LookAt(Vector3f(-1.0f,  0.0f,  0.0f), Vector3f(0.0f, -1.0f,  0.0f));
+            break;
+        case 1:
+            transform.LookAt(Vector3f( 1.0f,  0.0f,  0.0f), Vector3f(0.0f, -1.0f,  0.0f));
+            break;
+        case 2:
+            transform.LookAt(Vector3f( 0.0f,  1.0f,  0.0f), Vector3f(0.0f,  0.0f,  1.0f));
+            break;
+        case 3:
+            transform.LookAt(Vector3f( 0.0f, -1.0f,  0.0f), Vector3f(0.0f,  0.0f, -1.0f));
+            break;
+        case 4:
+            transform.LookAt(Vector3f( 0.0f,  0.0f,  1.0f), Vector3f(0.0f, -1.0f,  0.0f));
+            break;
+        case 5:
+            transform.LookAt(Vector3f( 0.0f,  0.0f, -1.0f), Vector3f(0.0f, -1.0f,  0.0f));
+            break;
+        default:
+            break;
+    }
+
+    return Camera(projection, &transform);
+}
+
 void CameraComponent::AddToEngine(CoreEngine* engine) const
 {
 	//TODO: This is probably not the correct solution in the case of multiple cameras,

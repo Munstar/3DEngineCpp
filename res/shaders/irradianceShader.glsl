@@ -35,14 +35,14 @@ void main()
 
 #elif defined(FS_BUILD)
 DeclareFragOutput(0, vec4);
-uniform samplerCube skyboxCubeMap;
+uniform samplerCube environmentCubeMap;
 
 void main()
 {
     vec3 N = normalize(texCoord0);
     vec3 irradiance = vec3(0.0);
     vec3 up = vec3(0.0, 1.0, 0.0);
-    vec3 right = cross(up, N);
+    vec3 right = cross(N, up);
     up = cross(N, right);
 
     float sampleDelta = 0.025;
@@ -54,7 +54,9 @@ void main()
             vec3 tangentSample = vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
             vec3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * N;
 
-            irradiance += texture(skyboxCubeMap, sampleVec).rgb * cos(theta) * sin(theta);
+            vec3 envColor = texture(environmentCubeMap, sampleVec).rgb;
+
+            irradiance += envColor * cos(theta) * sin(theta);
             nrSamples++;
         }
 

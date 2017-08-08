@@ -46,10 +46,14 @@ public:
 	
 	inline void SetProjection(const Matrix4f& projection) { m_projection = projection; }
 	inline void SetTransform(Transform* transform)        { m_transform = transform; }
+
+	static Camera GetCubeCamera(unsigned int index);
+
 protected:
 private:
 	Matrix4f   m_projection; //The projection with which the camera sees the world (i.e. perspective, orthographic, identity, etc.)
 	Transform* m_transform;  //The transform representing the position and orientation of the camera.
+
 };
 
 //CameraComponents are an easy way to use a camera as a component

@@ -25,7 +25,7 @@
 class TextureData : public ReferenceCounter
 {
 public:
-	TextureData(GLenum textureTarget, int width, int height, int numTextures, unsigned char** data, GLfloat* filters, GLenum* internalFormat, GLenum* format, GLenum* type, bool clamp, GLenum* attachments);
+	TextureData(GLenum textureTarget, int width, int height, int numTextures, void** data, GLfloat* filters, GLenum* internalFormat, GLenum* format, GLenum* type, bool clamp, GLenum* attachments);
 	
 	void Bind(int textureNum) const;
 	void BindAsRenderTarget() const;
@@ -40,7 +40,7 @@ private:
 	TextureData(TextureData& other) {}
 	void operator=(TextureData& other) {}
 
-	void InitTextures(unsigned char** data, GLfloat* filter, GLenum* internalFormat, GLenum* format, GLenum* type, bool clamp);
+	void InitTextures(void** data, GLfloat* filter, GLenum* internalFormat, GLenum* format, GLenum* type, bool clamp);
 	void InitRenderTargets(GLenum* attachments);
 
 	GLuint* m_textureID;
@@ -56,7 +56,7 @@ class Texture
 {
 public:
 	Texture(const std::string& fileName, GLenum textureTarget = GL_TEXTURE_2D, GLfloat filter = GL_LINEAR_MIPMAP_LINEAR, GLenum internalFormat = GL_RGBA, GLenum format = GL_RGBA, GLenum type = GL_UNSIGNED_BYTE, bool clamp = false, GLenum attachment = GL_NONE);
-	Texture(int width = 0, int height = 0, unsigned char* data = 0, GLenum textureTarget = GL_TEXTURE_2D, GLfloat filter = GL_LINEAR_MIPMAP_LINEAR, GLenum internalFormat = GL_RGBA, GLenum format = GL_RGBA, GLenum type = GL_UNSIGNED_BYTE, bool clamp = false, GLenum attachment = GL_NONE);
+	Texture(int width = 0, int height = 0, void* data = 0, GLenum textureTarget = GL_TEXTURE_2D, GLfloat filter = GL_LINEAR_MIPMAP_LINEAR, GLenum internalFormat = GL_RGBA, GLenum format = GL_RGBA, GLenum type = GL_UNSIGNED_BYTE, bool clamp = false, GLenum attachment = GL_NONE);
 	Texture(const Texture& texture);
 	void operator=(Texture texture);
 	virtual ~Texture();

@@ -23,7 +23,6 @@
 #include "material.h"
 #include "mesh.h"
 #include "window.h"
-#include "skybox.h"
 
 #include "../core/mappedValues.h"
 #include "../core/profiling.h"
@@ -40,6 +39,10 @@ public:
 	virtual ~RenderingEngine() {}
 	
 	void Render(const Entity& object);
+
+    void RenderSkybox();
+
+    void PrepareEnvironmentMap();
 
     void PrepareIrradianceMap();
 
@@ -73,12 +76,14 @@ private:
 	Transform                           m_planeTransform;
 	Mesh                                m_plane;
     Mesh                                m_gun;
-    Skybox                              m_skybox;
 	
 	const Window*                       m_window;
 	Texture                             m_tempTarget;
 	Material                            m_planeMaterial;
     Material                            m_pbrMaterial;
+    Material                            m_skyboxMaterial;
+    Texture                             m_environmentMap;
+    Texture                             m_environmentCubeMap;
 	Texture                             m_shadowMaps[NUM_SHADOW_MAPS];
 	Texture                             m_shadowMapTempTargets[NUM_SHADOW_MAPS];
     Texture                             m_irradianceMap;
@@ -87,6 +92,7 @@ private:
 	
 	Shader                              m_defaultShader;
 	Shader                              m_shadowMapShader;
+    Shader                              m_environmentShader;
 	Shader								m_skyboxShader;
     Shader                              m_irradianceShader;
 	Shader								m_cubeboxTestShader;
@@ -100,8 +106,10 @@ private:
 	Matrix4f                            m_lightMatrix;
 
 	Mesh								m_testMesh;
+	Mesh 								m_skybox;
 
 	Transform                           m_altCameraTransform;
+    Transform                           m_skyboxTransform;
 	Camera                              m_altCamera;
 	const Camera*                       m_mainCamera;
 	const BaseLight*                    m_activeLight;
@@ -112,7 +120,6 @@ private:
 	void ApplyFilter(const Shader& filter, const Texture& source, const Texture* dest);
 	
 	RenderingEngine(const RenderingEngine& other) :
-            m_skybox("skyboxCubeMap"),
 		    m_altCamera(Matrix4f(),0) {}
 	void operator=(const RenderingEngine& other) {}
 };

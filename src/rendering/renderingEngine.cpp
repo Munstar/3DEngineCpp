@@ -46,13 +46,16 @@ RenderingEngine::RenderingEngine(const Window& window) :
     m_brdfLUT(512, 512, NULL, GL_TEXTURE_2D, GL_LINEAR, GL_RGB16F, GL_RG, GL_FLOAT, true, GL_COLOR_ATTACHMENT0),
 	m_plane(Mesh("plane.obj")),
     m_gun("gun.obj"),
-    m_skybox("skybox3"),
 	m_window(&window),
 	m_tempTarget(window.GetWidth(), window.GetHeight(), 0, GL_TEXTURE_2D, GL_NEAREST, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, false, GL_COLOR_ATTACHMENT0),
 	m_planeMaterial("renderingEngine_filterPlane", m_tempTarget, 1, 8),
+    m_skyboxMaterial("skyboxMaterial"),
     m_pbrMaterial("pbrGun"),
+    m_environmentMap("newport_loft.hdr", GL_TEXTURE_2D, GL_LINEAR, GL_RGB16F, GL_RGB, GL_FLOAT, false, GL_NONE),
+    m_environmentCubeMap(512, 512, NULL, GL_TEXTURE_CUBE_MAP, GL_LINEAR, GL_RGB16F, GL_RGB, GL_FLOAT, true, GL_COLOR_ATTACHMENT0),
 	m_defaultShader("forward-ambient"),
 	m_shadowMapShader("shadowMapGenerator"),
+    m_environmentShader("environmentShader"),
 	m_skyboxShader("skybox"),
     m_irradianceShader("irradianceShader"),
 	m_cubeboxTestShader("cubeboxTestShader"),
@@ -63,7 +66,8 @@ RenderingEngine::RenderingEngine(const Window& window) :
 	m_nullFilter("filter-null"),
 	m_gausBlurFilter("filter-gausBlur7x1"),
 	m_fxaaFilter("filter-fxaa"),
-	m_testMesh("cube.obj"),
+	m_skybox("skybox.obj"),
+    m_skyboxTransform(Vector3f(0,0,0), Quaternion(0,0,0,1), 50),
 	m_altCameraTransform(Vector3f(0,0,0), Quaternion(Vector3f(0,1,0),ToRadians(180.0f))),
 	m_altCamera(Matrix4f().InitIdentity(), &m_altCameraTransform)
 {
@@ -72,7 +76,8 @@ RenderingEngine::RenderingEngine(const Window& window) :
 	SetSamplerSlot("dispMap",   2);
 	SetSamplerSlot("shadowMap", 3);
 
-    SetSamplerSlot("skyboxCubeMap", 0);
+    SetSamplerSlot("environmentCubeMap", 0);
+	SetSamplerSlot("environmentMap", 0);
 
     SetSamplerSlot("albedoMap", 0);
     SetSamplerSlot("normalMap", 1);
@@ -110,18 +115,29 @@ RenderingEngine::RenderingEngine(const Window& window) :
 	m_planeTransform.Rotate(Quaternion(Vector3f(1,0,0), ToRadians(90.0f)));
 	m_planeTransform.Rotate(Quaternion(Vector3f(0,0,1), ToRadians(180.0f)));
 
+    PrepareEnvironmentMap();
+    PreparePrefilterMap();
 	PrepareIrradianceMap();
     PrepareBrdfLUT();
-    PreparePrefilterMap();
+
+//
+//    m_pbrMaterial.SetTexture("albedoMap", Texture("Gold_Glossy_00_A.tga"));
+//    m_pbrMaterial.SetTexture("normalMap", Texture("Gold_Glossy_00_N.tga"));
+//    m_pbrMaterial.SetTexture("metallicMap", Texture("Gold_Glossy_00_M.tga"));
+//    m_pbrMaterial.SetTexture("roughnessMap", Texture("Gold_Glossy_00_R.tga"));
+//    m_pbrMaterial.SetTexture("aoMap", Texture("Gold_Glossy_00_AO.tga"));
 
     m_pbrMaterial.SetTexture("albedoMap", Texture("Cerberus_A.tga"));
     m_pbrMaterial.SetTexture("normalMap", Texture("Cerberus_N.tga"));
     m_pbrMaterial.SetTexture("metallicMap", Texture("Cerberus_M.tga"));
     m_pbrMaterial.SetTexture("roughnessMap", Texture("Cerberus_R.tga"));
     m_pbrMaterial.SetTexture("aoMap", Texture("Cerberus_AO.tga"));
+
     m_pbrMaterial.SetTexture("irradianceMap", m_irradianceMap);
     m_pbrMaterial.SetTexture("prefilterMap", m_prefilterMap);
     m_pbrMaterial.SetTexture("brdfLUT", m_brdfLUT);
+
+    m_skyboxMaterial.SetTexture("environmentCubeMap", m_environmentCubeMap);
 	
 	for(int i = 0; i < NUM_SHADOW_MAPS; i++)
 	{
@@ -271,19 +287,22 @@ void RenderingEngine::Render(const Entity& object)
 //		glDisable(GL_SCISSOR_TEST);
 	}
 
-    // render skyboxCubeMap
-    m_skybox.Render(m_skyboxShader, *this, *m_mainCamera);
-//
+//    PrepareIrradianceMap();
+
 	// render a cube
-//    Material test_material("test_material");
-//    test_material.SetTexture("skyboxCubeMap", m_irradianceMap);
+//    Material abc("test_material");
+//    abc.SetTexture("environmentCubeMap", m_prefilterMap);
 //    Mesh cube("cube.obj");
 //    m_cubeboxTestShader.Bind();
-//    m_cubeboxTestShader.UpdateUniforms(Transform(), test_material, *this, *m_mainCamera);
-//    m_gun.Draw();
+//    m_cubeboxTestShader.UpdateUniforms(Transform(), abc, *this, *m_mainCamera);
+//    cube.Draw();
 
+
+    Mesh cube("sphere.obj");
     m_pbrShader.Bind();
-    m_pbrShader.UpdateUniforms(Transform(Vector3f(0,0,0), Quaternion(0,0,0,1), 1.0f), m_pbrMaterial, *this, *m_mainCamera);
+    Transform transform(Vector3f(0,0,0), Quaternion(0,0,0,1), 5.0f);
+    //transform.SetRot(Quaternion(Vector3f(0,1,0), ToRadians(90.0)));
+    m_pbrShader.UpdateUniforms(transform, m_pbrMaterial, *this, *m_mainCamera);
     m_gun.Draw();
 
 
@@ -295,11 +314,15 @@ void RenderingEngine::Render(const Entity& object)
 //    m_plane.Draw();
 
 
+    RenderSkybox();
 	
 	float displayTextureAspect = (float)GetTexture("displayTexture").GetWidth()/(float)GetTexture("displayTexture").GetHeight();
 	float displayTextureHeightAdditive = displayTextureAspect * GetFloat("fxaaAspectDistortion");
-	SetVector3f("inverseFilterTextureSize", Vector3f(1.0f/(float)GetTexture("displayTexture").GetWidth(),
-	                                                 1.0f/((float)GetTexture("displayTexture").GetHeight() + displayTextureHeightAdditive), 0.0f));
+	SetVector3f("inverseFilterTextureSize",
+                Vector3f(1.0f/(float)GetTexture("displayTexture").GetWidth(),
+                1.0f/((float)GetTexture("displayTexture").GetHeight() + displayTextureHeightAdditive),
+                0.0f));
+
 	m_renderProfileTimer.StopInvocation();
 
 	m_windowSyncProfileTimer.StartInvocation();
@@ -307,65 +330,56 @@ void RenderingEngine::Render(const Entity& object)
 	m_windowSyncProfileTimer.StopInvocation();
 }
 
+void RenderingEngine::RenderSkybox()
+{
+    m_skyboxShader.Bind();
+    m_skyboxShader.UpdateUniforms(m_skyboxTransform, m_skyboxMaterial, *this, *m_mainCamera);
+    m_skybox.Draw();
+}
+
+void RenderingEngine::PrepareEnvironmentMap()
+{
+    Material material("environment");
+    material.SetTexture("environmentMap", m_environmentMap);
+    m_environmentCubeMap.BindAsRenderTarget();
+    m_environmentShader.Bind();
+    for(unsigned int i = 0; i < 6; i++)
+    {
+        m_environmentCubeMap.BindCubeMapUnit(i);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        m_environmentShader.UpdateUniforms(Transform(), material, *this, Camera::GetCubeCamera(i));
+        m_skybox.Draw();
+    }
+    m_window->BindAsRenderTarget();
+}
+
 void RenderingEngine::PrepareIrradianceMap()
 {
-    Transform cubeCameraTransforms[6] = {
-            Transform(),
-            Transform(),
-            Transform(),
-            Transform(),
-            Transform(),
-            Transform()
-    };
+    Material irradiance_material("irradiance");
+    irradiance_material.SetTexture("environmentCubeMap", m_environmentCubeMap);
 
-    cubeCameraTransforms[0].LookAt(Vector3f( 1.0f,  0.0f,  0.0f), Vector3f(0.0f, -1.0f,  0.0f));
-    cubeCameraTransforms[1].LookAt(Vector3f(-1.0f,  0.0f,  0.0f), Vector3f(0.0f, -1.0f,  0.0f));
-    cubeCameraTransforms[2].LookAt(Vector3f( 0.0f,  1.0f,  0.0f), Vector3f(0.0f,  0.0f,  1.0f));
-    cubeCameraTransforms[3].LookAt(Vector3f( 0.0f, -1.0f,  0.0f), Vector3f(0.0f,  0.0f, -1.0f));
-    cubeCameraTransforms[4].LookAt(Vector3f( 0.0f,  0.0f,  1.0f), Vector3f(0.0f, -1.0f,  0.0f));
-    cubeCameraTransforms[5].LookAt(Vector3f( 0.0f,  0.0f, -1.0f), Vector3f(0.0f, -1.0f,  0.0f));
-
-    Matrix4f projection = Matrix4f().InitPerspective(ToRadians(90.0), 1.0, 0.1f, 100.0f);
     m_irradianceMap.BindAsRenderTarget();
     for(unsigned int i = 0; i < 6; i++)
     {
         m_irradianceMap.BindCubeMapUnit(i);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        m_skybox.Render(m_irradianceShader, *this, Camera(projection, &cubeCameraTransforms[i]));
+        m_irradianceShader.Bind();
+        m_irradianceShader.UpdateUniforms(m_skyboxTransform, irradiance_material, *this, Camera::GetCubeCamera(i));
+        m_skybox.Draw();
     }
     m_window->BindAsRenderTarget();
 }
 
 void RenderingEngine::PreparePrefilterMap()
 {
-    Transform cubeCameraTransforms[6] = {
-            Transform(),
-            Transform(),
-            Transform(),
-            Transform(),
-            Transform(),
-            Transform()
-    };
-
-    cubeCameraTransforms[0].LookAt(Vector3f( 1.0f,  0.0f,  0.0f), Vector3f(0.0f, -1.0f,  0.0f));
-    cubeCameraTransforms[1].LookAt(Vector3f(-1.0f,  0.0f,  0.0f), Vector3f(0.0f, -1.0f,  0.0f));
-    cubeCameraTransforms[2].LookAt(Vector3f( 0.0f,  1.0f,  0.0f), Vector3f(0.0f,  0.0f,  1.0f));
-    cubeCameraTransforms[3].LookAt(Vector3f( 0.0f, -1.0f,  0.0f), Vector3f(0.0f,  0.0f, -1.0f));
-    cubeCameraTransforms[4].LookAt(Vector3f( 0.0f,  0.0f,  1.0f), Vector3f(0.0f, -1.0f,  0.0f));
-    cubeCameraTransforms[5].LookAt(Vector3f( 0.0f,  0.0f, -1.0f), Vector3f(0.0f, -1.0f,  0.0f));
-
-    Matrix4f projection = Matrix4f().InitPerspective(ToRadians(90.0), 1.0, 0.1f, 100.0f);
-    m_prefilterMap.BindAsRenderTarget();
-
-    Mesh cube("cube.obj");
     Material prefilter_material("prefilter");
-    prefilter_material.SetTexture("skyboxCubeMap", Texture("skyboxCubeMap", GL_TEXTURE_CUBE_MAP));
-    glCullFace(GL_FRONT);
-
+    prefilter_material.SetTexture("environmentCubeMap", m_environmentCubeMap);
 
     unsigned int maxMipLevels = 5;
     unsigned int mipWidth = 256;
     unsigned int mipHeight = 256;
+
+    m_prefilterMap.BindAsRenderTarget();
     for(unsigned int mip = 0; mip < maxMipLevels; ++mip)
     {
         mipWidth /= 2;
@@ -380,12 +394,10 @@ void RenderingEngine::PreparePrefilterMap()
             m_prefilterMap.BindCubeMapUnit(i, mip);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             m_prefilterShader.Bind();
-            m_prefilterShader.UpdateUniforms(Transform(Vector3f(0,0,0), Quaternion(0,0,0,1), 50.0f), prefilter_material, *this, Camera(projection, &cubeCameraTransforms[i]));
-            cube.Draw();
+            m_prefilterShader.UpdateUniforms(m_skyboxTransform, prefilter_material, *this, Camera::GetCubeCamera(i));
+            m_skybox.Draw();
         }
     }
-
-    glCullFace(GL_BACK);
     m_window->BindAsRenderTarget();
 }
 

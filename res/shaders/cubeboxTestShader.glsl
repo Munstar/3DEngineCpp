@@ -34,11 +34,11 @@ void main()
 #elif defined(FS_BUILD)
 DeclareFragOutput(0, vec4);
 
-uniform samplerCube skyboxCubeMap;
+uniform samplerCube environmentCubeMap;
 
 void main()
 {
-    vec4 color = texture(skyboxCubeMap, texCoord0);
+    vec4 color = texture(environmentCubeMap, texCoord0);
 //    color += vec4(1,1,1,1);
 	SetFragOutput(0, color);
 }

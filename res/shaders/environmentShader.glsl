@@ -29,20 +29,29 @@ uniform mat4 T_model;
 void main()
 {
     texCoord0 = position;
-    vec4 pos = T_projection * T_cameraRot * T_model * vec4(position, 1);
-    gl_Position = pos;
+    gl_Position = T_projection * T_cameraRot * T_model * vec4(position, 1);
 }
 
 #elif defined(FS_BUILD)
 DeclareFragOutput(0, vec4);
 
-uniform samplerCube environmentCubeMap;
+uniform sampler2D environmentMap;
+
+const vec2 invAtan = vec2(0.1591, 0.3183);
+
+vec2 SampleSphericalMap(vec3 v)
+{
+    vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
+    uv *= invAtan;
+    uv += 0.5;
+    uv = vec2(uv.x, 1.0 - uv.y);
+    return uv;
+}
 
 void main()
 {
-    vec3 color = texture(environmentCubeMap, texCoord0).rgb;
-    color = color/(color + vec3(1.0));
-    color = pow(color, vec3(1.0 / 2.2));
-	SetFragOutput(0, vec4(color, 1.0));
+    vec2 uv = SampleSphericalMap(normalize(texCoord0));
+    vec3 color = texture(environmentMap, uv).rgb;
+	SetFragOutput(0, vec4(color,1));
 }
 #endif
