@@ -78,8 +78,16 @@ void main()
 	float lumaResult2 = dot(luma, result2);
 	
 	if(lumaResult2 < lumaMin || lumaResult2 > lumaMax)
-		SetFragOutput(0, vec4(result1, 1.0));
+	{
+	    result1 = result1 / (result1 + vec3(1.0));
+	    result1 = pow(result1, vec3(1.0/ 2.2));
+	    SetFragOutput(0, vec4(result1, 1.0));
+	}
 	else
-		SetFragOutput(0, vec4(result2, 1.0));
+	{
+	    result2 = result2 / (result2 + vec3(1.0));
+    	result2 = pow(result2, vec3(1.0/ 2.2));
+	    SetFragOutput(0, vec4(result2, 1.0));
+	}
 }
 #endif

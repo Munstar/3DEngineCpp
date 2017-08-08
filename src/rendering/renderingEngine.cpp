@@ -45,24 +45,19 @@ RenderingEngine::RenderingEngine(const Window& window) :
     m_prefilterMap(128, 128, NULL, GL_TEXTURE_CUBE_MAP, GL_LINEAR_MIPMAP_LINEAR, GL_RGB16F, GL_RGB, GL_FLOAT, true, GL_COLOR_ATTACHMENT0),
     m_brdfLUT(512, 512, NULL, GL_TEXTURE_2D, GL_LINEAR, GL_RGB16F, GL_RG, GL_FLOAT, true, GL_COLOR_ATTACHMENT0),
 	m_plane(Mesh("plane.obj")),
-    m_gun("gun.obj"),
 	m_window(&window),
 	m_tempTarget(window.GetWidth(), window.GetHeight(), 0, GL_TEXTURE_2D, GL_NEAREST, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, false, GL_COLOR_ATTACHMENT0),
 	m_planeMaterial("renderingEngine_filterPlane", m_tempTarget, 1, 8),
     m_skyboxMaterial("skyboxMaterial"),
-    m_pbrMaterial("pbrGun"),
-    m_environmentMap("newport_loft.hdr", GL_TEXTURE_2D, GL_LINEAR, GL_RGB16F, GL_RGB, GL_FLOAT, false, GL_NONE),
-    m_environmentCubeMap(512, 512, NULL, GL_TEXTURE_CUBE_MAP, GL_LINEAR, GL_RGB16F, GL_RGB, GL_FLOAT, true, GL_COLOR_ATTACHMENT0),
-	m_defaultShader("forward-ambient"),
+    m_environmentMap("Ridgecrest_Road_Ref.hdr", GL_TEXTURE_2D, GL_LINEAR, GL_RGB16F, GL_RGB, GL_FLOAT, false, GL_NONE),
+    m_environmentCubeMap(1024, 1024, NULL, GL_TEXTURE_CUBE_MAP, GL_LINEAR, GL_RGB16F, GL_RGB, GL_FLOAT, true, GL_COLOR_ATTACHMENT0),
+	m_defaultShader("pbr-ambient"),
 	m_shadowMapShader("shadowMapGenerator"),
     m_environmentShader("environmentShader"),
 	m_skyboxShader("skybox"),
     m_irradianceShader("irradianceShader"),
-	m_cubeboxTestShader("cubeboxTestShader"),
-    m_texTestShader("texTestShader"),
     m_prefilterShader("prefilterShader"),
 	m_brdfShader("brdf"),
-    m_pbrShader("pbrShader"),
 	m_nullFilter("filter-null"),
 	m_gausBlurFilter("filter-gausBlur7x1"),
 	m_fxaaFilter("filter-fxaa"),
@@ -76,8 +71,8 @@ RenderingEngine::RenderingEngine(const Window& window) :
 	SetSamplerSlot("dispMap",   2);
 	SetSamplerSlot("shadowMap", 3);
 
-    SetSamplerSlot("environmentCubeMap", 0);
-	SetSamplerSlot("environmentMap", 0);
+    SetSamplerSlot("E_environmentCubeMap", 0);
+	SetSamplerSlot("E_environmentMap", 0);
 
     SetSamplerSlot("albedoMap", 0);
     SetSamplerSlot("normalMap", 1);
@@ -85,9 +80,9 @@ RenderingEngine::RenderingEngine(const Window& window) :
     SetSamplerSlot("roughnessMap", 3);
     SetSamplerSlot("aoMap", 4);
 
-    SetSamplerSlot("irradianceMap", 5);
-    SetSamplerSlot("prefilterMap", 6);
-    SetSamplerSlot("brdfLUT", 7);
+    SetSamplerSlot("E_irradianceMap", 5);
+    SetSamplerSlot("E_prefilterMap", 6);
+    SetSamplerSlot("E_brdfLUT", 7);
 	
 	SetSamplerSlot("filterTexture", 0);
 	
@@ -98,7 +93,7 @@ RenderingEngine::RenderingEngine(const Window& window) :
 	SetFloat("fxaaReduceMul", 1.0f/8.0f);
 	SetFloat("fxaaAspectDistortion", 150.0f);
 
-	SetTexture("displayTexture", Texture(m_window->GetWidth(), m_window->GetHeight(), 0, GL_TEXTURE_2D, GL_LINEAR, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, true, GL_COLOR_ATTACHMENT0));
+	SetTexture("displayTexture", Texture(m_window->GetWidth(), m_window->GetHeight(), 0, GL_TEXTURE_2D, GL_LINEAR, GL_RGBA16F, GL_RGBA, GL_FLOAT, true, GL_COLOR_ATTACHMENT0));
 
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
@@ -115,29 +110,17 @@ RenderingEngine::RenderingEngine(const Window& window) :
 	m_planeTransform.Rotate(Quaternion(Vector3f(1,0,0), ToRadians(90.0f)));
 	m_planeTransform.Rotate(Quaternion(Vector3f(0,0,1), ToRadians(180.0f)));
 
+    SetTexture("E_environmentMap", m_environmentMap);
     PrepareEnvironmentMap();
+    SetTexture("E_environmentCubeMap", m_environmentCubeMap);
     PreparePrefilterMap();
 	PrepareIrradianceMap();
     PrepareBrdfLUT();
 
-//
-//    m_pbrMaterial.SetTexture("albedoMap", Texture("Gold_Glossy_00_A.tga"));
-//    m_pbrMaterial.SetTexture("normalMap", Texture("Gold_Glossy_00_N.tga"));
-//    m_pbrMaterial.SetTexture("metallicMap", Texture("Gold_Glossy_00_M.tga"));
-//    m_pbrMaterial.SetTexture("roughnessMap", Texture("Gold_Glossy_00_R.tga"));
-//    m_pbrMaterial.SetTexture("aoMap", Texture("Gold_Glossy_00_AO.tga"));
+	SetTexture("E_irradianceMap", m_irradianceMap);
+	SetTexture("E_prefilterMap", m_prefilterMap);
+	SetTexture("E_brdfLUT", m_brdfLUT);
 
-    m_pbrMaterial.SetTexture("albedoMap", Texture("Cerberus_A.tga"));
-    m_pbrMaterial.SetTexture("normalMap", Texture("Cerberus_N.tga"));
-    m_pbrMaterial.SetTexture("metallicMap", Texture("Cerberus_M.tga"));
-    m_pbrMaterial.SetTexture("roughnessMap", Texture("Cerberus_R.tga"));
-    m_pbrMaterial.SetTexture("aoMap", Texture("Cerberus_AO.tga"));
-
-    m_pbrMaterial.SetTexture("irradianceMap", m_irradianceMap);
-    m_pbrMaterial.SetTexture("prefilterMap", m_prefilterMap);
-    m_pbrMaterial.SetTexture("brdfLUT", m_brdfLUT);
-
-    m_skyboxMaterial.SetTexture("environmentCubeMap", m_environmentCubeMap);
 	
 	for(int i = 0; i < NUM_SHADOW_MAPS; i++)
 	{
@@ -298,12 +281,12 @@ void RenderingEngine::Render(const Entity& object)
 //    cube.Draw();
 
 
-    Mesh cube("sphere.obj");
-    m_pbrShader.Bind();
-    Transform transform(Vector3f(0,0,0), Quaternion(0,0,0,1), 5.0f);
-    //transform.SetRot(Quaternion(Vector3f(0,1,0), ToRadians(90.0)));
-    m_pbrShader.UpdateUniforms(transform, m_pbrMaterial, *this, *m_mainCamera);
-    m_gun.Draw();
+//    Mesh cube("sphere.obj");
+//    m_pbrShader.Bind();
+//    Transform transform(Vector3f(0,0,0), Quaternion(0,0,0,1), 5.0f);
+//    //transform.SetRot(Quaternion(Vector3f(0,1,0), ToRadians(90.0)));
+//    m_pbrShader.UpdateUniforms(transform, m_pbrMaterial, *this, *m_mainCamera);
+//    m_gun.Draw();
 
 
 //    Material test_material("test_material");
@@ -340,7 +323,6 @@ void RenderingEngine::RenderSkybox()
 void RenderingEngine::PrepareEnvironmentMap()
 {
     Material material("environment");
-    material.SetTexture("environmentMap", m_environmentMap);
     m_environmentCubeMap.BindAsRenderTarget();
     m_environmentShader.Bind();
     for(unsigned int i = 0; i < 6; i++)
@@ -356,7 +338,6 @@ void RenderingEngine::PrepareEnvironmentMap()
 void RenderingEngine::PrepareIrradianceMap()
 {
     Material irradiance_material("irradiance");
-    irradiance_material.SetTexture("environmentCubeMap", m_environmentCubeMap);
 
     m_irradianceMap.BindAsRenderTarget();
     for(unsigned int i = 0; i < 6; i++)
@@ -373,7 +354,6 @@ void RenderingEngine::PrepareIrradianceMap()
 void RenderingEngine::PreparePrefilterMap()
 {
     Material prefilter_material("prefilter");
-    prefilter_material.SetTexture("environmentCubeMap", m_environmentCubeMap);
 
     unsigned int maxMipLevels = 5;
     unsigned int mipWidth = 256;

@@ -212,6 +212,12 @@ void Shader::UpdateUniforms(const Transform& transform, const Material& material
 			else
 				renderingEngine.UpdateUniformStruct(transform, material, *this, uniformName, uniformType);
 		}
+		else if(uniformName.substr(0, 2) == "E_")
+		{
+			int samplerSlot = renderingEngine.GetSamplerSlot(uniformName);
+            renderingEngine.GetTexture(uniformName).Bind(samplerSlot);
+            SetUniformi(uniformName, samplerSlot);
+		}
 		else if(uniformType == "sampler2D")
 		{
 			int samplerSlot = renderingEngine.GetSamplerSlot(uniformName);

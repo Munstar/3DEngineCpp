@@ -36,13 +36,15 @@ void main()
 #elif defined(FS_BUILD)
 DeclareFragOutput(0, vec4);
 
-uniform samplerCube environmentCubeMap;
+uniform samplerCube E_environmentCubeMap;
 
 void main()
 {
-    vec3 color = texture(environmentCubeMap, texCoord0).rgb;
-    color = color/(color + vec3(1.0));
-    color = pow(color, vec3(1.0 / 2.2));
+    vec3 color = texture(E_environmentCubeMap, texCoord0).rgb;
+
+//    color = color/(color + vec3(1.0));
+//    color = pow(color, vec3(1.0 / 2.2));
+
 	SetFragOutput(0, vec4(color, 1.0));
 }
 #endif

@@ -124,7 +124,7 @@ class PointLight : public BaseLight
 {
 public:
 	PointLight(const Vector3f& color = Vector3f(0,0,0), float intensity = 0, const Attenuation& atten = Attenuation(), 
-	           const Shader& shader = Shader("forward-point"));
+	           const Shader& shader = Shader("pbr-point"));
 	           
 	inline const Attenuation& GetAttenuation() const { return m_attenuation; }
 	inline const float GetRange()              const { return m_range; }

@@ -35,7 +35,7 @@ void main()
 #elif defined(FS_BUILD)
 DeclareFragOutput(0, vec4);
 
-uniform sampler2D environmentMap;
+uniform sampler2D E_environmentMap;
 
 const vec2 invAtan = vec2(0.1591, 0.3183);
 
@@ -51,7 +51,7 @@ vec2 SampleSphericalMap(vec3 v)
 void main()
 {
     vec2 uv = SampleSphericalMap(normalize(texCoord0));
-    vec3 color = texture(environmentMap, uv).rgb;
+    vec3 color = texture(E_environmentMap, uv).rgb;
 	SetFragOutput(0, vec4(color,1));
 }
 #endif

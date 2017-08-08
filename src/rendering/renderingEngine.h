@@ -75,12 +75,10 @@ private:
 	ProfileTimer                        m_windowSyncProfileTimer;
 	Transform                           m_planeTransform;
 	Mesh                                m_plane;
-    Mesh                                m_gun;
 	
 	const Window*                       m_window;
 	Texture                             m_tempTarget;
 	Material                            m_planeMaterial;
-    Material                            m_pbrMaterial;
     Material                            m_skyboxMaterial;
     Texture                             m_environmentMap;
     Texture                             m_environmentCubeMap;
@@ -95,17 +93,13 @@ private:
     Shader                              m_environmentShader;
 	Shader								m_skyboxShader;
     Shader                              m_irradianceShader;
-	Shader								m_cubeboxTestShader;
-	Shader								m_texTestShader;
     Shader                              m_prefilterShader;
     Shader                              m_brdfShader;
-    Shader                              m_pbrShader;
 	Shader                              m_nullFilter;
 	Shader                              m_gausBlurFilter;
 	Shader                              m_fxaaFilter;
 	Matrix4f                            m_lightMatrix;
 
-	Mesh								m_testMesh;
 	Mesh 								m_skybox;
 
 	Transform                           m_altCameraTransform;

@@ -43,6 +43,20 @@ void TestGame::Init(const Window& window)
 	Material bricks2("bricks2", Texture("bricks2.jpg"), 0.0f, 0,
 			Texture("bricks2_normal.png"), Texture("bricks2_disp.jpg"), 0.04f, -1.0f);
 
+	Material gun_pbr_material("gun_pbr");
+	gun_pbr_material.SetTexture("albedoMap", Texture("Cerberus_A.tga"));
+	gun_pbr_material.SetTexture("normalMap", Texture("Cerberus_N.tga"));
+	gun_pbr_material.SetTexture("metallicMap", Texture("Cerberus_M.tga"));
+	gun_pbr_material.SetTexture("roughnessMap", Texture("Cerberus_R.tga"));
+	gun_pbr_material.SetTexture("aoMap", Texture("Cerberus_AO.tga"));
+
+    Material gold_pbr_material("gold_pbr");
+    gold_pbr_material.SetTexture("albedoMap", Texture("Gold_Glossy_00_M.tga"));
+    gold_pbr_material.SetTexture("normalMap", Texture("Gold_Glossy_00_N.tga"));
+    gold_pbr_material.SetTexture("metallicMap", Texture("Gold_Glossy_00_M.tga"));
+    gold_pbr_material.SetTexture("roughnessMap", Texture("Gold_Glossy_00_R.tga"));
+    gold_pbr_material.SetTexture("aoMap", Texture("Gold_Glossy_00_AO.tga"));
+
 	IndexedModel square;
 	{
 		square.AddVertex(1.0f, -1.0f, 0.0f);  square.AddTexCoord(Vector2f(1.0f, 1.0f));
@@ -116,19 +130,23 @@ void TestGame::Init(const Window& window)
 
 	AddToScene((new Entity())
 				->AddComponent(new CameraComponent(Matrix4f().InitPerspective(
-							ToRadians(45.0f), window.GetAspect(), 0.1f, 1000.0f)))
+							ToRadians(70.0f), window.GetAspect(), 0.1f, 1000.0f)))
 				->AddComponent(new FreeLook(window.GetCenter()))
 				->AddComponent(new FreeMove(10.0f)));
 
-//    Material gun("gun");
-//    gun.SetTexture("diffuse", Texture("Cerberus_A.tga"));
-//    gun.SetTexture("normalMap", Texture("Cerberus_N"));
-//
-//	AddToScene((new Entity(Vector3f(0, 0, 0)))
+//	AddToScene((new Entity(Vector3f(0, 0, 0), Quaternion(0,0,0,1), 5))
 //							->AddComponent(new MeshRenderer(Mesh("gun.obj"),
-//									Material("gun"))));
+//									Material("gun_pbr"))));
 
-	static const int CUBE_SIZE = 3;
+    AddToScene((new Entity(Vector3f(0, 0, 0), Quaternion(0,0,0,1), 5))
+                       ->AddComponent(new MeshRenderer(Mesh("gun.obj"),
+                                                       Material("gun_pbr"))));
+
+    AddToScene((new Entity(Vector3f(-10, 10, 10), Quaternion(0,0,0,1)))
+		->AddComponent(new PointLight(Vector3f(1,1,1),
+				300, Attenuation(0,0,1))));
+
+//	static const int CUBE_SIZE = 3;
 
 //	AddToScene((new Entity())
 //		->AddComponent(new PointLight(Vector3f(1,1,1),
