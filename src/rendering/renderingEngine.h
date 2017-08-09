@@ -67,6 +67,11 @@ public:
 	inline const Matrix4f& GetLightMatrix()                            const { return m_lightMatrix; }
 protected:
 	inline void SetSamplerSlot(const std::string& name, unsigned int value) { m_samplerMap[name] = value; }
+
+public:
+    bool 							    m_renderCamera;
+    bool 								m_renderLight;
+
 private:
 	static const int NUM_SHADOW_MAPS = 10;
 	static const Matrix4f BIAS_MATRIX;

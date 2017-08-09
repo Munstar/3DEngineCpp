@@ -102,3 +102,15 @@ void CameraComponent::SetParent(Entity* parent)
 	//there is a parent object with a transform.
 	m_camera.SetTransform(GetTransform());
 }
+
+void CameraComponent::Render(const Shader &shader, const RenderingEngine &renderingEngine, const Camera &camera) const {
+    if(renderingEngine.m_renderCamera)
+    {
+        Shader default_shader("basicShader");
+        Mesh cube("cube.obj");
+        Material default_material("default");
+        default_shader.Bind();
+        default_shader.UpdateUniforms(GetTransform(), default_material, renderingEngine, camera);
+        cube.Draw();
+    }
+}

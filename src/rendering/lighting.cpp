@@ -30,35 +30,49 @@ ShadowCameraTransform BaseLight::CalcShadowCameraTransform(const Vector3f& mainC
 	return ShadowCameraTransform(GetTransform().GetTransformedPos(), GetTransform().GetTransformedRot());
 }
 
+void BaseLight::Render(const Shader &shader, const RenderingEngine &renderingEngine, const Camera &camera) const {
+	if(renderingEngine.m_renderLight)
+	{
+        Shader default_shader("basicShader");
+		Mesh sphere("sphere.obj");
+		Material default_material("default");
+        default_shader.Bind();
+        default_shader.UpdateUniforms(GetTransform(), default_material, renderingEngine, camera);
+		sphere.Draw();
+	}
+}
+
 DirectionalLight::DirectionalLight(const Vector3f& color, float intensity, int shadowMapSizeAsPowerOf2, 
 	                 float shadowArea, float shadowSoftness, float lightBleedReductionAmount, float minVariance) :
-	BaseLight(color, intensity, Shader("forward-directional")),
+	BaseLight(color, intensity, Shader("pbr-directional")),
 	m_halfShadowArea(shadowArea / 2.0f)
 {
 	if(shadowMapSizeAsPowerOf2 != 0)
 	{
 		SetShadowInfo(ShadowInfo(Matrix4f().InitOrthographic(-m_halfShadowArea, m_halfShadowArea, -m_halfShadowArea, 
 		                                                      m_halfShadowArea, -m_halfShadowArea, m_halfShadowArea), 
-								 true, shadowMapSizeAsPowerOf2, shadowSoftness, lightBleedReductionAmount, minVariance));
+								 false, shadowMapSizeAsPowerOf2, shadowSoftness, lightBleedReductionAmount, minVariance));
 	}
 }
 
 
 ShadowCameraTransform DirectionalLight::CalcShadowCameraTransform(const Vector3f& mainCameraPos, const Quaternion& mainCameraRot) const
 {
-	Vector3f resultPos = mainCameraPos + mainCameraRot.GetForward() * GetHalfShadowArea();
-	Quaternion resultRot = GetTransform().GetTransformedRot();
-	
-	float worldTexelSize = (GetHalfShadowArea()*2)/((float)(1 << GetShadowInfo().GetShadowMapSizeAsPowerOf2()));
-	
-	Vector3f lightSpaceCameraPos = resultPos.Rotate(resultRot.Conjugate());
-	
-	lightSpaceCameraPos.SetX(worldTexelSize * floor(lightSpaceCameraPos.GetX() / worldTexelSize));
-	lightSpaceCameraPos.SetY(worldTexelSize * floor(lightSpaceCameraPos.GetY() / worldTexelSize));
-	
-	resultPos = lightSpaceCameraPos.Rotate(resultRot);
-	
-	return ShadowCameraTransform(resultPos, resultRot);
+//	Vector3f resultPos = mainCameraPos + mainCameraRot.GetForward() * GetHalfShadowArea();
+//	Quaternion resultRot = GetTransform().GetTransformedRot();
+//
+//	float worldTexelSize = (GetHalfShadowArea()*2)/((float)(1 << GetShadowInfo().GetShadowMapSizeAsPowerOf2()));
+//
+//	Vector3f lightSpaceCameraPos = resultPos.Rotate(resultRot.Conjugate());
+//
+//	lightSpaceCameraPos.SetX(worldTexelSize * floor(lightSpaceCameraPos.GetX() / worldTexelSize));
+//	lightSpaceCameraPos.SetY(worldTexelSize * floor(lightSpaceCameraPos.GetY() / worldTexelSize));
+//
+//	resultPos = lightSpaceCameraPos.Rotate(resultRot);
+//
+//	return ShadowCameraTransform(resultPos, resultRot);
+
+    return ShadowCameraTransform(GetTransform().GetTransformedPos(), GetTransform().GetTransformedRot());
 }
 
 PointLight::PointLight(const Vector3f& color, float intensity, const Attenuation& attenuation, const Shader& shader) :

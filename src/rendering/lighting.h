@@ -75,8 +75,10 @@ public:
 		m_shadowInfo(ShadowInfo()) {}
 	
 	virtual ShadowCameraTransform CalcShadowCameraTransform(const Vector3f& mainCameraPos, const Quaternion& mainCameraRot) const;
-	virtual void AddToEngine(CoreEngine* engine) const;	
-	
+	virtual void AddToEngine(CoreEngine* engine) const;
+
+	virtual void Render(const Shader &shader, const RenderingEngine &renderingEngine, const Camera &camera) const;
+
 	inline const Vector3f& GetColor()        const { return m_color; }
 	inline const float GetIntensity()        const { return m_intensity; }
 	inline const Shader& GetShader()         const { return m_shader; }

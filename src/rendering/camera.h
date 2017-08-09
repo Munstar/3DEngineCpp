@@ -68,7 +68,9 @@ public:
 		m_camera(projection, 0) {}
 	
 	virtual void AddToEngine(CoreEngine* engine) const;
-	
+
+	virtual void Render(const Shader &shader, const RenderingEngine &renderingEngine, const Camera &camera) const;
+
 	inline Matrix4f GetViewProjection() const { return m_camera.GetViewProjection(); }
 	
 	inline void SetProjection(const Matrix4f& projection) { m_camera.SetProjection(projection); }

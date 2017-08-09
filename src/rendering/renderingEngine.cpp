@@ -15,6 +15,11 @@
  * limitations under the License.
  */
 
+#include <cassert>
+#include <cmath>
+
+#include <GL/glew.h>
+
 #include "renderingEngine.h"
 #include "window.h"
 #include "mesh.h"
@@ -23,9 +28,8 @@
 #include "../core/entity.h"
 #include "../3DEngine.h"
 
-#include <GL/glew.h>
-#include <cassert>
-#include <cmath>
+
+
 
 const Matrix4f RenderingEngine::BIAS_MATRIX = Matrix4f().InitScale(Vector3f(0.5, 0.5, 0.5)) * Matrix4f().InitTranslation(Vector3f(1.0, 1.0, 1.0));
 //Should construct a Matrix like this:
@@ -49,7 +53,7 @@ RenderingEngine::RenderingEngine(const Window& window) :
 	m_tempTarget(window.GetWidth(), window.GetHeight(), 0, GL_TEXTURE_2D, GL_NEAREST, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, false, GL_COLOR_ATTACHMENT0),
 	m_planeMaterial("renderingEngine_filterPlane", m_tempTarget, 1, 8),
     m_skyboxMaterial("skyboxMaterial"),
-    m_environmentMap("Ridgecrest_Road_Ref.hdr", GL_TEXTURE_2D, GL_LINEAR, GL_RGB16F, GL_RGB, GL_FLOAT, false, GL_NONE),
+    m_environmentMap("newport_loft.hdr", GL_TEXTURE_2D, GL_LINEAR, GL_RGB16F, GL_RGB, GL_FLOAT, false, GL_NONE),
     m_environmentCubeMap(1024, 1024, NULL, GL_TEXTURE_CUBE_MAP, GL_LINEAR, GL_RGB16F, GL_RGB, GL_FLOAT, true, GL_COLOR_ATTACHMENT0),
 	m_defaultShader("pbr-ambient"),
 	m_shadowMapShader("shadowMapGenerator"),
@@ -62,6 +66,8 @@ RenderingEngine::RenderingEngine(const Window& window) :
 	m_gausBlurFilter("filter-gausBlur7x1"),
 	m_fxaaFilter("filter-fxaa"),
 	m_skybox("skybox.obj"),
+    m_renderCamera(false),
+    m_renderLight(false),
     m_skyboxTransform(Vector3f(0,0,0), Quaternion(0,0,0,1), 50),
 	m_altCameraTransform(Vector3f(0,0,0), Quaternion(Vector3f(0,1,0),ToRadians(180.0f))),
 	m_altCamera(Matrix4f().InitIdentity(), &m_altCameraTransform)
@@ -69,7 +75,7 @@ RenderingEngine::RenderingEngine(const Window& window) :
 	SetSamplerSlot("diffuse",   0);
 	SetSamplerSlot("normalMap", 1);
 	SetSamplerSlot("dispMap",   2);
-	SetSamplerSlot("shadowMap", 3);
+	SetSamplerSlot("shadowMap", 8);
 
     SetSamplerSlot("E_environmentCubeMap", 0);
 	SetSamplerSlot("E_environmentMap", 0);
