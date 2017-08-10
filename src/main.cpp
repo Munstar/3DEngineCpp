@@ -62,7 +62,7 @@ void TestGame::Init(const Window& window)
     floor_pbr_material.SetTexture("normalMap", Texture("mahogfloor_normal.png"));
     floor_pbr_material.SetTexture("metallicMap", Texture("Gold_Glossy_00_R.tga"));
     floor_pbr_material.SetTexture("roughnessMap", Texture("mahogfloor_roughness.png"));
-    floor_pbr_material.SetTexture("aoMap", Texture("AO.png"));
+    floor_pbr_material.SetTexture("aoMap", Texture("Gold_Glossy_00_AO.tga"));
 
 	IndexedModel square;
 	{
@@ -89,9 +89,9 @@ void TestGame::Init(const Window& window)
                        ->AddComponent(new MeshRenderer(Mesh("floor.obj"),
                                                        Material("floor_pbr"))));
 
-    AddToScene((new Entity(Vector3f(0, 0, -3), Quaternion(Matrix4f().InitRotationFromDirection(Vector3f(0,1,-1), Vector3f(0,0,1)))))
+    AddToScene((new Entity(Vector3f(3, 5, -3), Quaternion(Matrix4f().InitRotationFromDirection(Vector3f(1,1,-1), Vector3f(2,0,1)))))
                        ->AddComponent(new DirectionalLight(Vector3f(1,1,1),
-                                                           6, 8, 20)));
+                                                           3, 10, 20)));
 
 //    AddToScene((new Entity(Vector3f(-10, 10, 10), Quaternion(0,0,0,1)))
 //                       ->AddComponent(new PointLight(Vector3f(1,1,1),

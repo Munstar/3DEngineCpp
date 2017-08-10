@@ -217,11 +217,11 @@ Texture::Texture(const std::string& fileName, GLenum textureTarget, GLfloat filt
             void* data = NULL;
 			if(type == GL_FLOAT)
             {
-                data = stbi_loadf(("/home/xin/Workspace/3DEngineCpp/res/textures/" + fileName).c_str(), &x, &y,
+                data = stbi_loadf(("./res/textures/" + fileName).c_str(), &x, &y,
                                   &bytesPerPixel, 0);
             }
             else
-				data = stbi_load(("/home/xin/Workspace/3DEngineCpp/res/textures/" + fileName).c_str(), &x, &y, &bytesPerPixel, 4);
+				data = stbi_load(("./res/textures/" + fileName).c_str(), &x, &y, &bytesPerPixel, 4);
 
 			if (data == NULL)
 			{
@@ -236,12 +236,12 @@ Texture::Texture(const std::string& fileName, GLenum textureTarget, GLfloat filt
 		if(textureTarget == GL_TEXTURE_CUBE_MAP)
 		{
             std::vector<std::string> faces;
-            faces.push_back("/home/xin/Workspace/3DEngineCpp/res/textures/" + fileName + "/right.jpg");
-            faces.push_back("/home/xin/Workspace/3DEngineCpp/res/textures/" + fileName + "/left.jpg");
-            faces.push_back("/home/xin/Workspace/3DEngineCpp/res/textures/" + fileName + "/top.jpg");
-            faces.push_back("/home/xin/Workspace/3DEngineCpp/res/textures/" + fileName + "/bottom.jpg");
-            faces.push_back("/home/xin/Workspace/3DEngineCpp/res/textures/" + fileName + "/back.jpg");
-            faces.push_back("/home/xin/Workspace/3DEngineCpp/res/textures/" + fileName + "/front.jpg");
+            faces.push_back("./res/textures/" + fileName + "/right.jpg");
+            faces.push_back("./res/textures/" + fileName + "/left.jpg");
+            faces.push_back("./res/textures/" + fileName + "/top.jpg");
+            faces.push_back("./res/textures/" + fileName + "/bottom.jpg");
+            faces.push_back("./res/textures/" + fileName + "/back.jpg");
+            faces.push_back("./res/textures/" + fileName + "/front.jpg");
 
             int x, y, bytesPerPixel;
             void* datas[6] = {NULL};
